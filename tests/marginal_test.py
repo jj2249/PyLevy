@@ -1,6 +1,6 @@
 from sys import argv
 import matplotlib.pyplot as plt
-from PyLevy.processes import processes
+from PyLevy.processes import base_processes
 
 
 plt.style.use('ggplot')
