@@ -3,7 +3,7 @@ from PyLevy.utils import maths_functions as mathsf
 
 class __LevyProcess:
 	@staticmethod
-	def integral(evaluation_points, t_series, x_series):
+	def integrate(evaluation_points, t_series, x_series):
 		W = [x_series[t_series<point].sum() for point in evaluation_points]
 		return np.array(W).T
 
@@ -24,11 +24,9 @@ class __JumpLevyProcess(__LevyProcess):
 		x_seq = h_func(epoch_seq)
 		acceptance_seq = thinning_func(x_seq)
 		u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
-
 		x_seq = x_seq[u < acceptance_seq]
-		# why return epochs?
-		# return epoch_seq, x_seq
-		return x_seq
+		times = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
+		return times, x_seq
 
 
 class GammaProcess(__JumpLevyProcess):

@@ -1,4 +1,5 @@
 from sys import argv
+import numpy as np
 import matplotlib.pyplot as plt
 from PyLevy.processes import processes
 
@@ -12,18 +13,16 @@ sims = int(argv[4])
 gp = processes.GammaProcess(beta=beta, C=C)
 tsp = processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C)
 
-endp_gamma = []
-endp_ts = []
+gammap_sample = gp.simulate_jumps()
+tsp_sample = tsp.simulate_jumps()
 
-for _ in range(sims):
-	jumps_gamma = gp.simulate_jumps()
-	endp_gamma.append(jumps_gamma.sum())
+axis = np.linspace(0., 1., 1000)
 
-	jumps_ts = tsp.simulate_jumps()
-	endp_ts.append(jumps_ts.sum())
+gpintegral = gp.integrate(axis, gammap_sample[0], gammap_sample[1])
+tspintegral = tsp.integrate(axis, tsp_sample[0], tsp_sample[1])
 
 fig, [ax1, ax2] = plt.subplots(nrows=1, ncols=2)
 
-ax1.hist(endp_gamma, bins=50, density=True)
-ax2.hist(endp_ts, bins=50, density=True)
+ax1.step(axis, gpintegral, lw=1.2)
+ax2.step(axis, tspintegral, lw=1.2)
 plt.show()
