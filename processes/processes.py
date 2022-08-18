@@ -2,20 +2,29 @@ import numpy as np
 from PyLevy.utils import maths_functions as mathsf
 
 class __LevyProcess:
+	"""
+	Base class for all Levy processes
+	"""
 	@staticmethod
 	def integrate(evaluation_points, t_series, x_series):
+		"""
+		Static method for plotting paths on a discretised time axis
+		"""
 		W = [x_series[t_series<point].sum() for point in evaluation_points]
 		return np.array(W).T
 
 
 class __JumpLevyProcess(__LevyProcess):
+	"""
+	Specific class for handling pure jump processes
+	"""
 	def __init__(self, rng=np.random.default_rng()):
 		self.rng = rng
 
 
-	def accept_reject_simulation(self, h_func, thinning_func, rate=1.0, M=100, gamma_0=0.0):
+	def accept_reject_simulation(self, h_func, thinning_func, rate, M, gamma_0):
 		"""
-
+		Simulate jump sizes and times using poisson epochs, a jump function and a thinning function
 		"""
 		epoch_seq = self.rng.exponential(scale=rate, size=M)
 		epoch_seq[0] += gamma_0
@@ -30,7 +39,9 @@ class __JumpLevyProcess(__LevyProcess):
 
 
 class GammaProcess(__JumpLevyProcess):
-
+	"""
+	Pure jump Gamma process
+	"""
 	def __init__(self, beta=None, C=None, rng=np.random.default_rng()):
 		self.set_parameters(beta, C)
 		super().__init__(rng=rng)
