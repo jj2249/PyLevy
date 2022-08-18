@@ -6,11 +6,11 @@ class __LevyProcess:
 	Base class for all Levy processes
 	"""
 	@staticmethod
-	def integrate(evaluation_points, t_series, x_series):
+	def integrate(evaluation_points, t_series, x_series, drift=0.):
 		"""
 		Static method for plotting paths on a discretised time axis
 		"""
-		W = [x_series[t_series<point].sum() for point in evaluation_points]
+		W = [x_series[t_series<point].sum()+drift*point for point in evaluation_points]
 		return np.array(W).T
 
 

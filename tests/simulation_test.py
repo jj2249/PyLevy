@@ -1,17 +1,15 @@
-from sys import argv
 import numpy as np
 import matplotlib.pyplot as plt
 from PyLevy.processes import base_processes
 
 plt.style.use('ggplot')
 
-alpha = float(argv[1])
-beta = float(argv[2])
-C = float(argv[3])
-sims = int(argv[4])
+alpha = 1.
+beta = 1.
+C = 1.
 
-gp = processes.GammaProcess(beta=beta, C=C)
-tsp = processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C)
+gp = base_processes.GammaProcess(beta=beta, C=C)
+tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C)
 
 gammap_sample = gp.simulate_jumps()
 tsp_sample = tsp.simulate_jumps()

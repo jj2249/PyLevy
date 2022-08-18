@@ -13,8 +13,8 @@ mu = 1.
 mu_W = 0.
 var_W = 1.
 
-nts = mean_mixture_processes.NormalTemperedStable(alpha, beta, C, mu, mu_W, var_W)
-ng = mean_mixture_processes.NormalGamma(beta, C, mu, mu_W, var_W)
+nts = mean_mixture_processes.NormalTemperedStableProcess(alpha, beta, C, mu, mu_W, var_W)
+ng = mean_mixture_processes.NormalGammaProcess(beta, C, mu, mu_W, var_W)
 axis = np.linspace(0., 1., 1000)
 nts_sample = nts.simulate_path(axis)
 ng_sample = nts.simulate_path(axis)
