@@ -21,7 +21,7 @@ class LinearSDEStateSpace:
 		self.__var_W = self.__driving.get_var_W()
 
 		self.__H = observation_matrix
-		self.__noise_std = np.sqrt(observation_noise)
+		self.__obs_noise = observation_noise
 
 		self.__rng = rng
 
@@ -42,7 +42,7 @@ class LinearSDEStateSpace:
 
 
 	def __observe_in_noise(self):
-		return (self.__H @ self.__state + self.__noise_std * self.__rng.normal()).item()
+		return (self.__H @ self.__state + np.sqrt(self.__var_W*self.__obs_noise)*self.__rng.normal()).item()
 
 
 	def generate_observations(self, times):
