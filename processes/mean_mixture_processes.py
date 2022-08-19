@@ -11,15 +11,27 @@ class __MeanMixtureLevyProcess(base_processes.__LevyProcess):
 		self.__subordinator = subordinator
 
 
-	def simulate_path(self, observation_times):
-		subordinator_sample = self.__subordinator.simulate_jumps()
-		
-		mean_mix_jtimes = subordinator_sample[0]
-		mean_mix_jsizes = self.__mu_W*subordinator_sample[1] + self.__std_W*np.sqrt(subordinator_sample[1])*self.__rng.normal(size=subordinator_sample[1].shape)
+	def get_mu_W(self):
+		return self.__mu_W
 
+
+	def get_var_W(self):
+		return self.__var_W
+
+
+	def simulate_jumps(self, rate=1.0, M=100, gamma_0=0.0):
+		subordinator_sample = self.__subordinator.simulate_jumps(rate, M, gamma_0)
+		jtimes = subordinator_sample[0]
+		jsizes = self.__mu_W*subordinator_sample[1] + self.__std_W*np.sqrt(subordinator_sample[1])*self.__rng.normal(size=subordinator_sample[1].shape)
+		return jtimes, jsizes
+
+
+	def simulate_path(self, observation_times):
+		mean_mix_jtimes, mean_mix_jsizes = self.simulate_jumps()
 		integrated_process = self.integrate(observation_times, mean_mix_jtimes, mean_mix_jsizes, drift=self.__mu)
 
 		return integrated_process
+
 
 class NormalTemperedStableProcess(__MeanMixtureLevyProcess):
 

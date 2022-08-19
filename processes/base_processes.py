@@ -34,13 +34,13 @@ class __JumpLevyProcess(__LevyProcess):
         epoch_seq = self.rng.exponential(scale=rate, size=M)
         epoch_seq[0] += gamma_0
         epoch_seq = epoch_seq.cumsum()
-
         x_seq = h_func(epoch_seq)
         acceptance_seq = thinning_func(x_seq)
         u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
         x_seq = x_seq[u < acceptance_seq]
-        times = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
+        times = self.rng.uniform(low=0.0, high=1./rate, size=x_seq.size)
         return times, x_seq
+
 
 
 class GammaProcess(__JumpLevyProcess):
