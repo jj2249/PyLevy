@@ -77,3 +77,16 @@ def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False,
 
     # Draw the q-q plot
     ax.scatter(x_quantiles, y_quantiles, **kwargs)
+
+
+def histogramplot(rvs, pdf_vals, num_bins = 100, xlabel="", ylabel="", plottitle="", plottlabel="", ax=None):
+    """ Function to compare generated process with density at t = T_{horizon} """
+    if ax is None:
+        ax = plt.gca()
+    x1 = rvs
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(plottitle)
+    binvals, _, _ = plt.hist(x1, num_bins, density=True, label="Histogram of Process at $t = T_{horizon}$")
+    ax.plot(np.linspace(min(x1), max(x1), len(x1)), pdf_vals, label=plottlabel)
+    ax.legend()
