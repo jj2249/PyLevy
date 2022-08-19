@@ -34,7 +34,7 @@ class __JumpLevyProcess(__LevyProcess):
 		acceptance_seq = thinning_func(x_seq)
 		u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
 		x_seq = x_seq[u < acceptance_seq]
-		times = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
+		times = self.rng.uniform(low=0.0, high=1./rate, size=x_seq.size)
 		return times, x_seq
 
 

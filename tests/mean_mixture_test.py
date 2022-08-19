@@ -9,7 +9,7 @@ alpha = 1.
 beta = 1.
 C = 1.
 
-mu = 1.
+mu = 0.
 mu_W = 0.
 var_W = 1.
 
