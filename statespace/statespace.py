@@ -26,10 +26,46 @@ class LinearSDEStateSpace:
 		self.__rng = rng
 
 
+	def get_model_drift(self, interval):
+		return self.__drift(interval)
+
+
+	def get_model_m(self, interval, jump_times, jump_sizes):
+		return np.atleast_2d((self.__mu_W * jump_sizes * self.__mean(interval, jump_times)).sum(axis=-1)).T
+
+
+	def get_model_S(self, interval, jump_times, jump_sizes):
+		return (self.__var_W * jump_sizes * self.__covar(interval, jump_times)).sum(axis=-1)
+
+
+	def get_model_B(self):
+		return self.__B
+
+
+	def get_model_H(self):
+		return self.__H
+
+
+	def get_model_kv(self):
+		return self.__obs_noise
+
+
+	def get_model_var_W(self):
+		return self.__var_W
+
+
+	def set_state(self, state):
+		self.__state = state
+
+
+	def get_driving_jumps(self, rate, M=100, gamma_0=0.):
+		return self.__driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0)
+
+
 	def __increment_state(self, interval, M=100, gamma_0=0.):
-		jump_times, jump_sizes = self.__driving.simulate_jumps(rate=1./interval, M=M, gamma_0=gamma_0)
-		m_vec = np.atleast_2d((self.__mu_W * jump_sizes * self.__mean(interval, jump_times)).sum(axis=-1)).T
-		S_mat = (self.__var_W * jump_sizes * self.__covar(interval, jump_times)).sum(axis=-1)
+		jump_times, jump_sizes = self.get_driving_jumps(rate=1./interval, M=M, gamma_0=gamma_0)
+		m_vec = self.get_model_m(interval, jump_times, jump_sizes)
+		S_mat = self.get_model_S(interval, jump_times, jump_sizes)
 		try:
 			C_mat = np.linalg.cholesky(S_mat)
 			e = C_mat @ self.__rng.normal(size=S_mat.shape[1])
@@ -43,6 +79,8 @@ class LinearSDEStateSpace:
 
 	def __observe_in_noise(self):
 		return (self.__H @ self.__state + np.sqrt(self.__var_W*self.__obs_noise)*self.__rng.normal()).item()
+
+
 
 
 	def generate_observations(self, times):
