@@ -1,8 +1,6 @@
 import numpy as np
 import sys
-
-sys.path.extend(['../utils'])
-from maths_functions import *
+from PyLevy.utils.maths_functions import psi, dpsi, hankel_squared, gammafnc
 
 
 class __LevyProcess:
@@ -210,14 +208,6 @@ class GIGSubordinator(__JumpLevyProcess):
         jump_sizes = jump_sizes[(u < N2_prob_acc)]
         return jump_sizes
 
-    def __GIG_simple_jumps(self):
-        delta = self.delta
-        x = self.__generate_tempered_stable_jumps(0.5, (self.gamma ** 2) / 2, delta)
-        zs = np.sqrt(gammaDist.rvs(0.5, loc=0, scale=1 / (x / (2 * delta ** 2)), size=len(x)))
-        u = np.random.uniform(0., 1., len(x))
-        prob_acc = 2 / (np.pi * zs * hankel_squared(np.abs(self.lambd), zs))
-        jump_sizes = x[(u < prob_acc)]
-        return jump_sizes
 
     def __GIG_harder_jumps(self):
         delta = self.delta
