@@ -41,7 +41,7 @@ class GIGProcess(__JumpLevyProcess):
 
 		def __generate_z(self, x):
     		# i think shape of z is implicit
-			return self.rng.gamma(shape=0.5, scale=(2.*self.outer.delta**2)/x)
+			return np.sqrt(self.rng.gamma(shape=0.5, scale=(2.*self.outer.delta**2)/x))
 
 		def thinning_func(self, z):
 			return 2. / (np.pi * z * hankel_squared(np.abs(self.outer.lambd)), z)

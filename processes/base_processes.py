@@ -1,9 +1,8 @@
 import numpy as np
-import sys
 from PyLevy.utils.maths_functions import psi, dpsi, hankel_squared, gammafnc
 
 
-class __LevyProcess:
+class LevyProcess:
     """
 	Base class for all Levy processes
 	"""
@@ -17,7 +16,7 @@ class __LevyProcess:
         return np.array(W).T
 
 
-class __JumpLevyProcess(__LevyProcess):
+class JumpLevyProcess(LevyProcess):
     """
 	Specific class for handling pure jump processes
 	"""
@@ -41,7 +40,7 @@ class __JumpLevyProcess(__LevyProcess):
 
 
 
-class GammaProcess(__JumpLevyProcess):
+class GammaProcess(JumpLevyProcess):
     """
 	Pure jump Gamma process
 	"""
@@ -73,7 +72,7 @@ class GammaProcess(__JumpLevyProcess):
         return (self.C / self.beta ** 2) * incgammal(2., 1. / (np.exp(c / self.C) - 1.))
 
 
-class TemperedStableProcess(__JumpLevyProcess):
+class TemperedStableProcess(JumpLevyProcess):
 
     def __init__(self, alpha=None, beta=None, C=None, rng=np.random.default_rng()):
         self.set_parameters(alpha, beta, C)
@@ -107,201 +106,267 @@ class TemperedStableProcess(__JumpLevyProcess):
                                                                              -1. / self.alpha))
 
 
-class GIGSubordinator(__JumpLevyProcess):
+# class GIGSubordinator(__JumpLevyProcess):
+
+#     def __init__(self, delta=None, gamma=None, lambd=None, rng=np.random.default_rng()):
+#         self.set_parameters(delta, gamma, lambd)
+#         super().__init__(rng=rng)
+
+#     def set_parameters(self, delta, gamma, lambd):
+#         self.delta = delta
+#         self.gamma = gamma
+#         self.lambd = lambd
+
+#     def get_parameters(self):
+#         return {"delta": self.delta, "gamma": self.gamma, "lambd": self.lambd}
+
+#     @staticmethod
+#     def __g(x, sd, td, f1, f2):
+#         a = 0
+#         b = 0
+#         c = 0
+#         if (x >= -sd) and (x <= td):
+#             a = 1
+#         elif (x > td):
+#             b = f1
+#         elif (x < -sd):
+#             c = f2
+#         return a + b + c
+
+#     def __generate_gamma_jumps(self, C, beta):
+#         epochs = self.generate_epochs()
+#         x = 1 / (beta * (np.exp(epochs / C) - 1))
+#         prob_acc = (1 + beta * x) * np.exp(-beta * x)
+#         return self.rejection_sampling(prob_acc, x)
+
+#     def __generate_tempered_stable_jumps(self, alpha, beta, delta):
+#         epochs = self.generate_epochs()
+#         C = (self.get_maxT() - self.get_minT()) * delta * gammafnc(0.5) / (np.sqrt(2) * np.pi)
+#         x = ((alpha * epochs) / C) ** (-1 / alpha)
+#         prob_acc = np.exp(-beta * x)
+#         return self.rejection_sampling(prob_acc, x)
+
+#     def __GIG_gamma_component(self):
+#         return self.__generate_gamma_jumps(max(0.0, self.lambd), self.gamma ** 2 / 2)
+
+#     def __generate_N1(self, z1, H0, lambd, delta, gamma_param):
+#         # Generate gamma process
+#         beta = 0.5 * gamma_param ** 2
+#         C = z1 / (np.pi * np.pi * np.absolute(lambd) * H0)  # Shape parameter of process at t = 1
+#         jump_sizes = self.__generate_gamma_jumps(C, beta, )
+
+#         """ Rejection sampling from Algorithm 6 """
+#         const1 = (z1 ** 2) * jump_sizes / (2 * delta ** 2)
+#         GIG_prob_acc = np.absolute(lambd) * gammafnc(np.abs(lambd)) * gammainc(np.abs(lambd), const1) / (
+#                 ((z1 ** 2) * jump_sizes / (2 * delta ** 2)) ** np.abs(lambd))
+#         u = np.random.uniform(0., 1., size=jump_sizes.size)
+#         jump_sizes = jump_sizes[(u < GIG_prob_acc)]
+
+#         """ Sample from truncated Nakagami """
+#         C1 = np.random.uniform(0., 1., size=jump_sizes.size)
+#         l = C1 * gammainc(np.absolute(lambd), (z1 ** 2 * jump_sizes) / (2 * delta ** 2))
+#         zs = np.sqrt(((2 * delta ** 2) / jump_sizes) * gammaincinv(np.absolute(lambd), l))
+
+#         """ Thinning for process N1 """
+#         u = np.random.uniform(0., 1., size=jump_sizes.size)
+#         N1_prob_acc = H0 / (hankel_squared(np.abs(lambd), zs) *
+#                             (zs ** (2 * np.abs(lambd))) / (z1 ** (2 * np.abs(lambd) - 1)))
+#         jump_sizes = jump_sizes[(u < N1_prob_acc)]
+#         return jump_sizes
+
+#     def __generate_N2(self, z1, H0, lambd, delta, gamma_param, N_epochs, T_horizon):
+#         """Generate point process N2 """
+
+#         """ Generate Tempered Stable Jump Size samples """
+#         alpha = 0.5
+#         beta = (gamma_param ** 2) / 2
+#         C = np.sqrt(2 * delta ** 2) * gammafnc(0.5) / ((np.pi ** 2) * H0)
+#         epochs = np.cumsum(
+#             np.random.exponential(1, N_epochs)) / T_horizon
+#         x = ((alpha * epochs) / C) ** (-1 / alpha)
+#         prob_acc = np.exp(-beta * x)
+#         u = np.random.uniform(0.0, 1.0, size=prob_acc.size)
+#         jump_sizes = x[(u < prob_acc)]
+
+#         """ Rejection sampling based on Algorithm 7 """
+#         GIG_prob_acc = gammaincc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2))
+#         u = np.random.uniform(0., 1., size=jump_sizes.size)
+#         jump_sizes = jump_sizes[(u < GIG_prob_acc)]
+
+#         # Simulate Truncated Square-Root Gamma Process:
+#         C2 = np.random.uniform(low=0.0, high=1.0, size=jump_sizes.size)
+#         zs = np.sqrt(
+#             ((2 * delta ** 2) / jump_sizes) * gammaincinv(0.5,
+#                                                           C2 * (
+#                                                               gammaincc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2)))
+#                                                           + gammainc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2))))
+
+#         """Thinning for process N2"""
+#         u = np.random.uniform(0., 1., size=jump_sizes.size)
+#         N2_prob_acc = H0 / (zs * hankel_squared(np.abs(lambd), zs))
+#         jump_sizes = jump_sizes[(u < N2_prob_acc)]
+#         return jump_sizes
+
+
+#     def __GIG_harder_jumps(self):
+#         delta = self.delta
+#         gamma_param = self.gamma
+#         lambd = self.lambd
+#         N_epochs = self.get_epoch_number()
+#         T_horizon = self.get_maxT() - self.get_minT()
+#         a = np.pi * np.power(2.0, (1.0 - 2.0 * np.abs(lambd)))
+#         b = gammafnc(np.abs(lambd)) ** 2
+#         c = 1 / (1 - 2 * np.abs(lambd))
+#         z1 = (a / b) ** c
+#         H0 = z1 * hankel_squared(np.abs(self.lambd), z1)
+#         N1 = self.__generate_N1(z1, H0, lambd, delta, gamma_param)
+#         N2 = self.__generate_N2(z1, H0, lambd, delta, gamma_param, N_epochs, T_horizon)
+#         jump_sizes = np.append(N1, N2)
+#         return jump_sizes
+
+#     def generate_jumps(self, epochs=None):
+#         """ Function does NOT use epochs """
+#         if np.abs(self.__lambd) >= 0.5:
+#             jumps = self.__GIG_simple_jumps()
+#         else:
+#             jumps = self.__GIG_harder_jumps()
+#         if self.__lambd > 0:
+#             p2 = self.__GIG_gamma_component()
+#             jumps = np.append(jumps, p2)
+#         super().set_jump_sizes(jumps)
+
+
+
+class GIGProcess(JumpLevyProcess):
 
     def __init__(self, delta=None, gamma=None, lambd=None, rng=np.random.default_rng()):
         self.set_parameters(delta, gamma, lambd)
         super().__init__(rng=rng)
+
 
     def set_parameters(self, delta, gamma, lambd):
         self.delta = delta
         self.gamma = gamma
         self.lambd = lambd
 
+
     def get_parameters(self):
         return {"delta": self.delta, "gamma": self.gamma, "lambd": self.lambd}
 
-    @staticmethod
-    def __g(x, sd, td, f1, f2):
-        a = 0
-        b = 0
-        c = 0
-        if (x >= -sd) and (x <= td):
-            a = 1
-        elif (x > td):
-            b = f1
-        elif (x < -sd):
-            c = f2
-        return a + b + c
 
-    def __generate_gamma_jumps(self, C, beta):
-        epochs = self.generate_epochs()
-        x = 1 / (beta * (np.exp(epochs / C) - 1))
-        prob_acc = (1 + beta * x) * np.exp(-beta * x)
-        return self.rejection_sampling(prob_acc, x)
-
-    def __generate_tempered_stable_jumps(self, alpha, beta, delta):
-        epochs = self.generate_epochs()
-        C = (self.get_maxT() - self.get_minT()) * delta * gammafnc(0.5) / (np.sqrt(2) * np.pi)
-        x = ((alpha * epochs) / C) ** (-1 / alpha)
-        prob_acc = np.exp(-beta * x)
-        return self.rejection_sampling(prob_acc, x)
-
-    def __GIG_gamma_component(self):
-        return self.__generate_gamma_jumps(max(0.0, self.lambd), self.gamma ** 2 / 2)
-
-    def __generate_N1(self, z1, H0, lambd, delta, gamma_param):
-        # Generate gamma process
-        beta = 0.5 * gamma_param ** 2
-        C = z1 / (np.pi * np.pi * np.absolute(lambd) * H0)  # Shape parameter of process at t = 1
-        jump_sizes = self.__generate_gamma_jumps(C, beta, )
-
-        """ Rejection sampling from Algorithm 6 """
-        const1 = (z1 ** 2) * jump_sizes / (2 * delta ** 2)
-        GIG_prob_acc = np.absolute(lambd) * gammafnc(np.abs(lambd)) * gammainc(np.abs(lambd), const1) / (
-                ((z1 ** 2) * jump_sizes / (2 * delta ** 2)) ** np.abs(lambd))
-        u = np.random.uniform(0., 1., size=jump_sizes.size)
-        jump_sizes = jump_sizes[(u < GIG_prob_acc)]
-
-        """ Sample from truncated Nakagami """
-        C1 = np.random.uniform(0., 1., size=jump_sizes.size)
-        l = C1 * gammainc(np.absolute(lambd), (z1 ** 2 * jump_sizes) / (2 * delta ** 2))
-        zs = np.sqrt(((2 * delta ** 2) / jump_sizes) * gammaincinv(np.absolute(lambd), l))
-
-        """ Thinning for process N1 """
-        u = np.random.uniform(0., 1., size=jump_sizes.size)
-        N1_prob_acc = H0 / (hankel_squared(np.abs(lambd), zs) *
-                            (zs ** (2 * np.abs(lambd))) / (z1 ** (2 * np.abs(lambd) - 1)))
-        jump_sizes = jump_sizes[(u < N1_prob_acc)]
-        return jump_sizes
-
-    def __generate_N2(self, z1, H0, lambd, delta, gamma_param, N_epochs, T_horizon):
-        """Generate point process N2 """
-
-        """ Generate Tempered Stable Jump Size samples """
-        alpha = 0.5
-        beta = (gamma_param ** 2) / 2
-        C = np.sqrt(2 * delta ** 2) * gammafnc(0.5) / ((np.pi ** 2) * H0)
-        epochs = np.cumsum(
-            np.random.exponential(1, N_epochs)) / T_horizon
-        x = ((alpha * epochs) / C) ** (-1 / alpha)
-        prob_acc = np.exp(-beta * x)
-        u = np.random.uniform(0.0, 1.0, size=prob_acc.size)
-        jump_sizes = x[(u < prob_acc)]
-
-        """ Rejection sampling based on Algorithm 7 """
-        GIG_prob_acc = gammaincc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2))
-        u = np.random.uniform(0., 1., size=jump_sizes.size)
-        jump_sizes = jump_sizes[(u < GIG_prob_acc)]
-
-        # Simulate Truncated Square-Root Gamma Process:
-        C2 = np.random.uniform(low=0.0, high=1.0, size=jump_sizes.size)
-        zs = np.sqrt(
-            ((2 * delta ** 2) / jump_sizes) * gammaincinv(0.5,
-                                                          C2 * (
-                                                              gammaincc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2)))
-                                                          + gammainc(0.5, (z1 ** 2) * jump_sizes / (2 * delta ** 2))))
-
-        """Thinning for process N2"""
-        u = np.random.uniform(0., 1., size=jump_sizes.size)
-        N2_prob_acc = H0 / (zs * hankel_squared(np.abs(lambd), zs))
-        jump_sizes = jump_sizes[(u < N2_prob_acc)]
-        return jump_sizes
-
-
-    def __GIG_harder_jumps(self):
-        delta = self.delta
-        gamma_param = self.gamma
-        lambd = self.lambd
-        N_epochs = self.get_epoch_number()
-        T_horizon = self.get_maxT() - self.get_minT()
-        a = np.pi * np.power(2.0, (1.0 - 2.0 * np.abs(lambd)))
-        b = gammafnc(np.abs(lambd)) ** 2
-        c = 1 / (1 - 2 * np.abs(lambd))
-        z1 = (a / b) ** c
-        H0 = z1 * hankel_squared(np.abs(self.lambd), z1)
-        N1 = self.__generate_N1(z1, H0, lambd, delta, gamma_param)
-        N2 = self.__generate_N2(z1, H0, lambd, delta, gamma_param, N_epochs, T_horizon)
-        jump_sizes = np.append(N1, N2)
-        return jump_sizes
-
-    def generate_jumps(self, epochs=None):
-        """ Function does NOT use epochs """
-        if np.abs(self.__lambd) >= 0.5:
-            jumps = self.__GIG_simple_jumps()
+    def simulate_jumps(self, rate=1., M=100, gamma_0=0.):
+        if np.abs(self.lambd) >= 0.5:
+            simulator = self.SimpleSimulator(self, rng=self.rng)
+            jtimes, jsizes = simulator.simulate_internal_jumps(rate, M, gamma_0)
         else:
-            jumps = self.__GIG_harder_jumps()
-        if self.__lambd > 0:
-            p2 = self.__GIG_gamma_component()
-            jumps = np.append(jumps, p2)
-        super().set_jump_sizes(jumps)
+            simulator1 = self.__N1(self, rng=self.rng)
+            simulator2 = self.__N2(self, rng=self.rng)
+            jtimes1, jsizes1 = simulator1.simulate_internal_jumps(rate, M, gamma_0)
+            jtimes2, jsizes2 = simulator2.simulate_internal_jumps(rate, M, gamma_0)
+            jtimes = np.append(jtimes1, jtimes2)
+            jsizes = np.append(jsizes1, jsizes2)
 
-    def marginal_samples(self, numSamples, tHorizon):
-        """ Code is translated from MATLAB Code from:
-			Jan Patrick Hartkopf (2022).
-			gigrnd (https://www.mathworks.com/matlabcentral/fileexchange/78805-gigrnd),
-			MATLAB Central File Exchange.
-			Setup - - we sample from the two parameter version of the GIG(alpha, omega) where:
-			P, a, b = lambd, gamma_param ** 2, delta ** 2,
-		"""
+        if self.lambd > 0.:
+            # simulate gamma component
+            simulator = GammaProcess(beta=self.gamma**2/2., C=self.lambd)
+            e_jtimes, e_jsizes = simulator.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0)
+            jtimes = np.append(jtimes, e_jtimes)
+            jsizes = np.append(jsizes, e_jsizes)
+        return jtimes, jsizes
 
-        """ Which parameter is scaled by TIME ??? """
 
-        a = self.gamma ** 2
-        b = self.delta ** 2
-        lambd = self.lambd
-        omega = np.sqrt(a * b)
-        swap = False
-        if lambd < 0:
-            lambd = lambd * -1
-            swap = True
-        alpha = np.sqrt(omega ** 2 + lambd ** 2) - lambd
-        x = -psi(1, alpha, lambd)  # TODO CHECK
-        if (x >= 0.5) and (x <= 2):
-            t = 1
-        elif x > 2:
-            t = np.sqrt(2 / (alpha + lambd))
-        elif x < 0.5:
-            t = np.log(4 / (alpha + 2 * lambd))
+    class SimpleSimulator(JumpLevyProcess):
+        def __init__(self, outer, rng=np.random.default_rng()):
+            self.outer = outer
+            super().__init__(rng=rng)
+            self.tsp_generator = TemperedStableProcess(alpha=0.5, beta=outer.gamma**2, C=outer.delta*gammafnc(0.5)/(np.sqrt(2.)*np.pi), rng=outer.rng)
 
-        x = -psi(-1, alpha, lambd)  # TODO CHECK
-        if (x >= 0.5) and (x <= 2):
-            s = 1
-        elif x > 2:
-            s = np.sqrt(4 / (alpha * np.cosh(1) + lambd))
-        elif x < 0.5:
-            s = min(1 / lambd, np.log(1 + 1 / alpha + np.sqrt(1 / alpha ** 2 + 2 / alpha)))
+        def __generate_z(self, x):
+            return np.sqrt(self.rng.gamma(shape=0.5, scale=(2.*self.outer.delta**2)/x))
 
-        eta = -psi(t, alpha, lambd)
-        zeta = -dpsi(t, alpha, lambd)
-        theta = -psi(-s, alpha, lambd)
-        xi = dpsi(-s, alpha, lambd)
-        p = 1 / xi
-        r = 1 / zeta
-        td = t - r * eta
-        sd = s - p * theta
-        q = td + sd
+        def thinning_func(self, z):
+            return 2. / (np.pi * z * hankel_squared(np.abs(self.outer.lambd), z))
 
-        X = [0 for _ in range(numSamples)]
-        for i in range(numSamples):
-            done = False
-            while not done:
-                U = np.random.uniform(0., 1., size=1)
-                V = np.random.uniform(0., 1., size=1)
-                W = np.random.uniform(0., 1., size=1)
-                if U < (q / (p + q + r)):
-                    X[i] = -sd + q * V
-                elif U < ((q + r) / (p + q + r)):
-                    X[i] = td - r * np.log(V)
-                else:
-                    X[i] = -sd + p * np.log(V)
-                f1 = np.exp(-eta - zeta * (X[i] - t))
-                f2 = np.exp(-theta + xi * (X[i] + s))
-                if (W * self.__g(X[i], sd, td, f1, f2)) <= np.exp(psi(X[i], alpha, lambd)):
-                    done = True
-        X = np.exp(X) * (lambd / omega + np.sqrt(1 + (lambd / omega) ** 2))
-        if swap:
-            X = 1 / X
-        X = X / np.sqrt(a / b)
-        X = X.reshape((1, X.shape[0]))
-        return X[0]
+        def accept_reject_simulation(self, x, z, thinning_func, rate):
+            assert(x.shape == z.shape)
+            acceptance_seq = thinning_func(z)
+            u = self.rng.uniform(low=0.0, high=1.0, size=x.size)
+            x_acc = x[u < acceptance_seq]
+            times = self.rng.uniform(low=0.0, high=1./rate, size=x_acc.size)
+            return times, x_acc
+
+        def simulate_internal_jumps(self, rate=1.0, M=100, gamma_0=0.):
+            _, x = self.tsp_generator.simulate_jumps(rate, M, gamma_0)
+            z = self.__generate_z(x)
+            jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
+            return jtimes, jsizes
+
+    
+    class __N1(SimpleSimulator):
+        def __init__(self, outer, z0, H0, rng=np.random.default_rng()):
+            self.outer = outer
+            super().__init__(rng=rng)
+            self.q1 = self.__Q1(outer, rng=rng)
+            self.z0 = z0
+
+
+        def __generate_z(self, x):
+            # sim from truncated square root gamma density
+            pass
+
+
+        def thinning_func(self, z):
+            # thin according to algo 4 step 4
+            pass
+
+
+        def simulate_internal_jumps(self, rate=1.0, M=100, gamma_0=0.):
+            _, x = self.q1.simulate_jumps(rate, M, gamma_0)
+            z = self.__generate_z(x)
+            jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
+            return jtimes, jsizes
+
+
+        class __Q1(GammaProcess):
+            def __init__(self, outer, rng=np.random.default_rng()):
+                super().__init__(beta=(outer.gamma**2)/2., C=outer.z0/(np.pi*np.pi*outer.H0*np.abs(outer.lambd)))
+                self.outer = outer
+
+            def thinning_func(self, x):
+                return (np.abs(self.outer.lambd)*incgammal(np.abs(self.outer.lambd), (self.outer.z0**2)*x/(2.*self.outer.delta**2))/np.power((self.outer.z0**2)*x/(2.*self.outer.delta**2), np.abs(self.outer.lambd)))
+
+
+    class __N2(SimpleSimulator):
+        def __init__(self, outer, z0, H0, rng=np.random.default_rng()):
+            self.outer = outer
+            super().__init__(rng=rng)
+            self.q2 = self.__Q2(outer, z0, H0, rng=rng)
+            self.z0 = z0
+            self.H0 = H0
+
+
+        def __generate_z(self, x):
+            # sim from truncated square root gamma density (algo 5 step 3)
+            pass
+
+
+        def thinning_func(self, z):
+            # thin according to algo 5 step 4
+            pass
+
+
+        def simulate_internal_jumps(self, rate=1.0, M=100, gamma_0=0.):
+            _, x = self.q2.simulate_jumps(rate, M, gamma_0)
+            z = self.__generate_z(x)
+            jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
+            return jtimes, jsizes
+
+
+        class __Q2(TemperedStableProcess):
+            def __init__(self, outer, rng=np.random.default_rng()):
+                super().__init__(beta=(outer.gamma**2)/2., alpha=0.5, C=((2.*outer.delta**2)**0.5)*gammafnc(0.5)/(np.pi*np.pi*outer.H0))
+                self.outer = outer
+
+            def thinning_func(self, x):
+                # insert algo 7 step 2 here
+                pass
