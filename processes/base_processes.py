@@ -92,7 +92,7 @@ class TemperedStableProcess(JumpLevyProcess):
     def thinning_func(self, x):
         return np.exp(-self.beta * x)
 
-    def simulate_jumps(self, rate=1.0, M=100, gamma_0=0.0):
+    def simulate_jumps(self, rate=1.0, M=100, gamma_0=0.):
         return self.accept_reject_simulation(self.h_func, self.thinning_func, rate, M, gamma_0)
 
     def unit_expected_residual_tempered_stable(self, c):

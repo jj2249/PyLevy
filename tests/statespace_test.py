@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 plt.style.use('ggplot')
 
-theta = -0.2
+theta = -.2
 initial_state = np.atleast_2d(np.array([0., 0.])).T
 
 observation_matrix1 = np.atleast_2d(np.array([1., 0.]))

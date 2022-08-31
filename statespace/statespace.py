@@ -10,98 +10,95 @@ class LinearSDEStateSpace:
 		- model noise matrix = B s.t. Xt = drift @ Xs + B @ noise
 		"""
 		# need to place checks on the dimensions of the return values of these functors
-		self.__state = initial_state
-		self.__drift = model_drift
-		self.__mean = model_mean
-		self.__covar = model_covar
-		self.__B = model_noise_matrix
+		self.state = initial_state
+		self.drift = model_drift
+		self.mean = model_mean
+		self.covar = model_covar
+		self.B = model_noise_matrix
 
-		self.__driving = driving_process
-		self.__mu_W = self.__driving.get_mu_W()
-		self.__var_W = self.__driving.get_var_W()
+		self.driving = driving_process
+		self.mu_W = self.driving.get_mu_W()
+		self.var_W = self.driving.get_var_W()
 
-		self.__H = observation_matrix
-		self.__obs_noise = observation_noise
+		self.H = observation_matrix
+		self.obs_noise = observation_noise
 
-		self.__rng = rng
+		self.rng = rng
 
 
 	def get_model_drift(self, interval):
-		return self.__drift(interval)
+		return self.drift(interval)
 
 
 	def get_model_m(self, interval, jump_times, jump_sizes):
-		return np.atleast_2d((self.__mu_W * jump_sizes * self.__mean(interval, jump_times)).sum(axis=-1)).T
+		return np.atleast_2d((self.mu_W * jump_sizes * self.mean(interval, jump_times)).sum(axis=-1)).T
 
 
 	def get_model_S(self, interval, jump_times, jump_sizes):
-		return (self.__var_W * jump_sizes * self.__covar(interval, jump_times)).sum(axis=-1)
+		return (self.var_W * jump_sizes * self.covar(interval, jump_times)).sum(axis=-1)
 
 
 	def get_model_B(self):
-		return self.__B
+		return self.B
 
 
 	def get_model_H(self):
-		return self.__H
+		return self.H
 
 
 	def get_model_kv(self):
-		return self.__obs_noise
+		return self.obs_noise
 
 
 	def get_model_var_W(self):
-		return self.__var_W
+		return self.var_W
 
 
 	def set_state(self, state):
-		self.__state = state
+		self.state = state
 
 
 	def get_driving_jumps(self, rate, M=100, gamma_0=0.):
-		return self.__driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0)
+		return self.driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0)
 
 
-	def __increment_state(self, interval, M=100, gamma_0=0.):
+	def increment_state(self, interval, M=100, gamma_0=0.):
 		jump_times, jump_sizes = self.get_driving_jumps(rate=1./interval, M=M, gamma_0=gamma_0)
 		m_vec = self.get_model_m(interval, jump_times, jump_sizes)
 		S_mat = self.get_model_S(interval, jump_times, jump_sizes)
 		try:
 			C_mat = np.linalg.cholesky(S_mat)
-			e = C_mat @ self.__rng.normal(size=S_mat.shape[1])
+			e = C_mat @ self.rng.normal(size=S_mat.shape[1])
 		except np.linalg.LinAlgError:
 			e = np.zeros(S_mat.shape[1])
 
 		e = np.atleast_2d(e).T
-		new_state = self.__drift(interval) @ self.__state + self.__B @ e
+		new_state = self.drift(interval) @ self.state + self.B @ e
 		return new_state
 
 
-	def __observe_in_noise(self):
-		return (self.__H @ self.__state + np.sqrt(self.__var_W*self.__obs_noise)*self.__rng.normal()).item()
-
-
-
+	def observe_in_noise(self):
+		return (self.H @ self.state + np.sqrt(self.var_W*self.obs_noise)*self.rng.normal()).item()
 
 	def generate_observations(self, times):
 		intervals = np.diff(times)
-		observations = [self.__observe_in_noise()]
+		observations = [self.observe_in_noise()]
 		for diff in intervals:
-			self.__state = self.__increment_state(diff)
-			observations.append(self.__observe_in_noise())
+			self.state = self.increment_state(diff)
+			observations.append(self.observe_in_noise())
 		return observations
 
 
 class LangevinStateSpace(LinearSDEStateSpace):
 
 	def __init__(self, initial_state, theta, driving_process, observation_matrix, observation_noise, rng=np.random.default_rng()):
-		self.__theta = theta
+		self.theta = theta
 		super().__init__(initial_state, self.langevin_drift, self.langevin_mean, self.langevin_covar, self.langevin_noise_matrix, driving_process, observation_matrix, observation_noise, rng=rng)
 
 	# model specific functors
-	langevin_drift = lambda self, interval : np.exp(self.__theta*interval)*np.array([[0.,1./self.__theta],[0.,1.]]) + np.array([[1.,-1./self.__theta],[0.,0.]])
-	langevin_mean = lambda self, interval, jtime : np.exp(self.__theta*(interval-jtime))*np.atleast_2d(np.array([[1./self.__theta, 1]])).T + np.atleast_2d(np.array([[-1./self.__theta, 0.]])).T
-	langevin_covar = lambda self, interval, jtime : np.exp(2.*self.__theta*(interval-jtime))*np.array([[1./(self.__theta**2),1./self.__theta],[1./self.__theta,1.]])[:,:,np.newaxis] + np.exp(self.__theta*(interval-jtime))*np.array([[-2./(self.__theta**2),-1./self.__theta],[-1./self.__theta,0]])[:,:,np.newaxis] + np.array([[1./(self.__theta**2),0.],[0.,0.]])[:,:,np.newaxis]
+	langevin_drift = lambda self, interval : np.exp(self.theta*interval)*np.array([[0.,1./self.theta],[0.,1.]]) + np.array([[1.,-1./self.theta],[0.,0.]])
+	langevin_mean = lambda self, interval, jtime : np.exp(self.theta*(interval-jtime))*np.atleast_2d(np.array([[1./self.theta, 1]])).T + np.atleast_2d(np.array([[-1./self.theta, 0.]])).T
+	langevin_covar = lambda self, interval, jtime : np.exp(2.*self.theta*(interval-jtime))*np.array([[1./(self.theta**2),1./self.theta],[1./self.theta,1.]])[:,:,np.newaxis] + np.exp(self.theta*(interval-jtime))*np.array([[-2./(self.theta**2),-1./self.theta],[-1./self.theta,0]])[:,:,np.newaxis] + np.array([[1./(self.theta**2),0.],[0.,0.]])[:,:,np.newaxis]
 	langevin_noise_matrix = np.eye(2)
 
 
