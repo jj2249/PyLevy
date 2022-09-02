@@ -3,7 +3,6 @@ from scipy.special import gamma as gammafnc
 from scipy.special import hankel1, hankel2, gammainc, gammaincc
 from scipy.stats import levy_stable
 from scipy.special import gammaincinv
-from scipy.stats import gamma as gammaDist
 
 def incgammau(s, x):
     return gammaincc(s, x) * gammafnc(s)
@@ -32,6 +31,20 @@ def get_z0_H0(lambd):
     z1 = (a / b) ** c
     H0 = z1 * hankel_squared(abs(lambd), z1)
     return z1, H0
+
+
+def g(x, sd, td, f1, f2):
+    """ Helper function for GIG marginal sample generator """
+    a = 0
+    b = 0
+    c = 0
+    if (x >= -sd) and (x <= td):
+        a = 1
+    elif (x > td):
+        b = f1
+    elif (x < -sd):
+        c = f2
+    return a + b + c
 
 
 def logsumexp(w, h, x, axis=0, retlog=False):
