@@ -2,7 +2,7 @@ import numpy as np
 
 class LinearSDEStateSpace:
 
-	def __init__(self, initial_state, model_drift, model_mean, model_covar, model_noise_matrix, driving_process, observation_matrix, observation_noise, rng=np.random.default_rng()):
+	def __init__(self, initial_state, model_drift, model_mean, model_covar, model_noise_matrix, driving_process, observation_matrix, rng=np.random.default_rng()):
 		"""
 		- model drift = e^A(t-u)
 		- model mean = e^A(t-u) h
@@ -21,7 +21,6 @@ class LinearSDEStateSpace:
 		self.var_W = self.driving.get_var_W()
 
 		self.H = observation_matrix
-		self.obs_noise = observation_noise
 
 		self.rng = rng
 
@@ -44,10 +43,6 @@ class LinearSDEStateSpace:
 
 	def get_model_H(self):
 		return self.H
-
-
-	def get_model_kv(self):
-		return self.obs_noise
 
 
 	def get_model_var_W(self):
@@ -77,23 +72,24 @@ class LinearSDEStateSpace:
 		return new_state
 
 
-	def observe_in_noise(self):
-		return (self.H @ self.state + np.sqrt(self.var_W*self.obs_noise)*self.rng.normal()).item()
+	def observe_in_noise(self, kv):
+		return (self.H @ self.state + np.sqrt(self.var_W*kv)*self.rng.normal()).item()
 
-	def generate_observations(self, times):
+
+	def generate_observations(self, times, kv):
 		intervals = np.diff(times)
-		observations = [self.observe_in_noise()]
+		observations = [self.observe_in_noise(kv)]
 		for diff in intervals:
 			self.state = self.increment_state(diff)
-			observations.append(self.observe_in_noise())
+			observations.append(self.observe_in_noise(kv))
 		return observations
 
 
 class LangevinStateSpace(LinearSDEStateSpace):
 
-	def __init__(self, initial_state, theta, driving_process, observation_matrix, observation_noise, rng=np.random.default_rng()):
+	def __init__(self, initial_state, theta, driving_process, observation_matrix, rng=np.random.default_rng()):
 		self.theta = theta
-		super().__init__(initial_state, self.langevin_drift, self.langevin_mean, self.langevin_covar, self.langevin_noise_matrix, driving_process, observation_matrix, observation_noise, rng=rng)
+		super().__init__(initial_state, self.langevin_drift, self.langevin_mean, self.langevin_covar, self.langevin_noise_matrix, driving_process, observation_matrix, rng=rng)
 
 	# model specific functors
 	langevin_drift = lambda self, interval : np.exp(self.theta*interval)*np.array([[0.,1./self.theta],[0.,1.]]) + np.array([[1.,-1./self.theta],[0.,0.]])
