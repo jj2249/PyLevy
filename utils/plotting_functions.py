@@ -45,7 +45,6 @@ def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False,
     plt.rc('axes', titlesize=title_size)
     x1 = x
     y1 = y
-
     if ax is None:
         ax = plt.gca()
     if quantiles is None:
