@@ -21,9 +21,10 @@ class KalmanFilter:
 		A = self.model.get_model_drift(interval)
 		m = self.model.get_model_m(interval, jtimes, jsizes)
 		S = self.model.get_model_S(interval, jtimes, jsizes)
+		full_noise_covar = S + self.model.get_model_Ce(interval)
 
 		predicted_mean = A @ self.a + m
-		predicted_covar = A @ self.C @ A.T + self.B @ S @ self.B.T
+		predicted_covar = A @ self.C @ A.T + self.B @ full_noise_covar @ self.B.T
 
 		return predicted_mean, predicted_covar
 
