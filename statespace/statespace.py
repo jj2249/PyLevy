@@ -4,7 +4,7 @@ import numpy as np
 class LinearSDEStateSpace:
 
     def __init__(self, initial_state, model_drift, model_mean, model_covar, model_ext_covar, model_noise_matrix, driving_process,
-                 observation_matrix, modelCase=1, rng=np.random.default_rng()):
+                 observation_matrix, modelCase=1, truncation_level=1e-6, rng=np.random.default_rng()):
         """
         - model drift = e^A(t-u)
         - model mean = e^A(t-u) h
@@ -24,6 +24,8 @@ class LinearSDEStateSpace:
         self.var_W = self.driving.get_var_W()
         self.noise_model = modelCase
 
+        self.truncation = truncation_level
+
         self.H = observation_matrix
 
         self.rng = rng
@@ -38,7 +40,7 @@ class LinearSDEStateSpace:
         return (self.var_W * jump_sizes * self.covar(interval, jump_times)).sum(axis=-1)
 
     def get_model_Ce(self, interval):
-        cov_constant = self.driving.subordinator.small_jump_covariance(case=self.noise_model)
+        cov_constant = self.driving.subordinator.small_jump_covariance(truncation=self.truncation, case=self.noise_model)
         print(cov_constant)
         return (self.var_W * cov_constant[0] + (self.mu_W**2)*cov_constant[1]) * self.ext_covar(interval)
 
@@ -58,7 +60,7 @@ class LinearSDEStateSpace:
         self.state = state
 
     def get_driving_jumps(self, rate, M=100, gamma_0=0.):
-        return self.driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0)
+        return self.driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0, truncation=self.truncation)
 
     def increment_state(self, interval, M=100, gamma_0=0.):
         jump_times, jump_sizes = self.get_driving_jumps(rate=1. / interval, M=M, gamma_0=gamma_0)
@@ -90,11 +92,11 @@ class LinearSDEStateSpace:
 
 class LangevinStateSpace(LinearSDEStateSpace):
 
-    def __init__(self, initial_state, theta, driving_process, observation_matrix, modelCase=3, rng=np.random.default_rng()):
+    def __init__(self, initial_state, theta, driving_process, observation_matrix, modelCase=3, truncation_level=1e-6, rng=np.random.default_rng()):
         self.theta = theta
         self.P = 2
         super().__init__(initial_state, self.langevin_drift, self.langevin_mean, self.langevin_covar, self.langevin_ext_covar,
-                         self.langevin_noise_matrix, driving_process, observation_matrix, modelCase=modelCase, rng=rng)
+                         self.langevin_noise_matrix, driving_process, observation_matrix, modelCase=modelCase, truncation_level=truncation_level, rng=rng)
 
     # model specific functors
     langevin_drift = lambda self, interval: np.exp(self.theta * interval) * np.array(

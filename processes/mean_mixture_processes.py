@@ -19,8 +19,8 @@ class MeanMixtureLevyProcess(base_processes.LevyProcess):
 		return self.var_W
 
 
-	def simulate_jumps(self, rate=1.0, M=100, gamma_0=0.0):
-		subordinator_sample = self.subordinator.simulate_jumps(rate, M, gamma_0)
+	def simulate_jumps(self, rate=1.0, M=100, gamma_0=0., truncation=1e-6):
+		subordinator_sample = self.subordinator.simulate_jumps(rate, M, gamma_0, truncation=truncation)
 		jtimes = subordinator_sample[0]
 		jsizes = self.mu_W*subordinator_sample[1] + self.std_W*np.sqrt(subordinator_sample[1])*self.rng.normal(size=subordinator_sample[1].shape)
 		return jtimes, jsizes
@@ -35,22 +35,22 @@ class MeanMixtureLevyProcess(base_processes.LevyProcess):
 
 class NormalTemperedStableProcess(MeanMixtureLevyProcess):
 
-	def __init__(self, alpha, beta, C, mu, mu_W, var_W, truncation=0.0, rng=np.random.default_rng()):
-		self.tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C, truncation=truncation, rng=rng)
+	def __init__(self, alpha, beta, C, mu, mu_W, var_W, rng=np.random.default_rng()):
+		self.tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C, rng=rng)
 		super().__init__(mu, mu_W, var_W, self.tsp, rng=rng)
 
 
 class NormalGammaProcess(MeanMixtureLevyProcess):
 
-	def __init__(self, beta, C, mu, mu_W, var_W, truncation=0.0, rng=np.random.default_rng()):
-		self.gp = base_processes.GammaProcess(beta=beta, C=C, truncation=truncation, rng=rng)
+	def __init__(self, beta, C, mu, mu_W, var_W, rng=np.random.default_rng()):
+		self.gp = base_processes.GammaProcess(beta=beta, C=C, rng=rng)
 		super().__init__(mu, mu_W, var_W, self.gp, rng=rng)
 
 
 class GeneralHyperbolicProcess(MeanMixtureLevyProcess):
 	# using GIG process
-	def __init__(self, delta, gamma, lambd, mu, mu_W, var_W, truncation=0.0, rng=np.random.default_rng()):
-		self.gig = base_processes.GIGProcess(delta=delta, gamma=gamma, lambd = lambd, truncation=truncation, rng=rng)
+	def __init__(self, delta, gamma, lambd, mu, mu_W, var_W, rng=np.random.default_rng()):
+		self.gig = base_processes.GIGProcess(delta=delta, gamma=gamma, lambd = lambd, rng=rng)
 		super().__init__(mu, mu_W, var_W, self.gig, rng=rng)
 
 

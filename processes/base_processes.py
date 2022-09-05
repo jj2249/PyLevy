@@ -78,15 +78,15 @@ class JumpLevyProcess(LevyProcess):
     def unit_variance_residual_tempered_stable(self):
         return 0.0
 
-    def small_jump_covariance(self, case=3):
+    def small_jump_covariance(self, truncation, case=3):
         if case == 1:
             """ Truncated series with no covariance modelling """
             return 0.0, 0.0
         elif case == 2:
             """ Full Gaussian approximation """
-            return self.unit_expected_residual_jumps(), self.unit_variance_residual_tempered_stable()
+            return self.unit_expected_residual_jumps(truncation), self.unit_variance_residual_tempered_stable(truncation)
         elif case == 3:
-            return self.unit_expected_residual_jumps(), 0.0
+            return self.unit_expected_residual_jumps(truncation), 0.0
         else:
             raise ValueError("Case number needs to be an integer between 1 and 3 inclusive")
 
