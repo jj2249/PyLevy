@@ -429,4 +429,4 @@ class GIGProcess(JumpLevyProcess):
                 self.z0 = z0
 
             def thinning_func(self, x):
-                return gammaincc(0.5, (self.z0 ** 2) * x / (2 * self.outer.delta ** 2)) / gammafnc(0.5)
+                return gammaincc(0.5, (self.z0 ** 2) * x / (2 * self.outer.delta ** 2))

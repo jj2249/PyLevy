@@ -75,6 +75,7 @@ class MarginalParticleFilter:
 	def normalise_weights(self):
 		lsum_weights = logsumexp(self.lweights, lambda x: 1., np.ones(self.N), retlog=True)
 		lweights = self.lweights - lsum_weights
+		print(lsum_weights)
 		return lweights
 
 
@@ -108,11 +109,11 @@ class MarginalParticleFilter:
 		selections = self.rng.multinomial(self.N, probabilites)
 
 		new_particles = []
-
+		new_weights = -np.log(self.N)*np.atleast_2d(np.ones(self.N))
 		for idx in range(self.N):
 			for _ in range(selections[idx]):
 				new_particles.append(copy.copy(self.particles[idx]))
-		return -np.log(self.N)*np.atleast_2d(np.ones(self.N)), new_particles
+		return new_weights, np.array(new_particles)
 
 
 
@@ -124,7 +125,6 @@ class MarginalParticleFilter:
 			self.lweights = self.increment_all_particles(time-curr_t, observation, kv)
 			self.lweights = self.normalise_weights()
 			curr_t = time
-			
 			if self.get_logDninf() < self.log_resample_limit:
 				self.lweights, self.kalmans = self.resample_particles()
 

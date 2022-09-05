@@ -41,7 +41,7 @@ class LinearSDEStateSpace:
 
     def get_model_Ce(self, interval):
         cov_constant = self.driving.subordinator.small_jump_covariance(truncation=self.truncation, case=self.noise_model)
-        print(cov_constant)
+        # print(cov_constant)
         return (self.var_W * cov_constant[0] + (self.mu_W**2)*cov_constant[1]) * self.ext_covar(interval)
 
     def get_model_B(self):

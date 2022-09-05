@@ -15,31 +15,30 @@ observation_matrixd = np.atleast_2d(np.array([0., 1.]))
 alpha = 0.8
 beta = 1.
 C = 1.
-truncation = 0.
+truncation = 1e-6
 mu = 0.
 mu_W = 0.
 var_W = 1.
 noiseModel = 2
 
 rng = np.random.default_rng(seed=2)
-ngp = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, truncation=truncation, rng=rng)
+ngp = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng)
 langevin = LangevinStateSpace(initial_state, theta, ngp, observation_matrix, modelCase=noiseModel, rng=rng)
 times = rng.exponential(size=100).cumsum()
-xs = langevin.generate_observations(times, kv=1e-5)
-print(xs)
+xs = langevin.generate_observations(times, kv=1e-1)
 
 rngd = np.random.default_rng(seed=2)
-ngpd = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, truncation=truncation, rng=rng)
+ngpd = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rngd)
 langevind = LangevinStateSpace(initial_state, theta, ngpd, observation_matrixd, modelCase=noiseModel, rng=rngd)
 xds = langevind.generate_observations(times, kv=1e-5)
 
 
-rng2 = np.random.default_rng(seed=2)
-ngp = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, truncation=truncation, rng=rng)
-langevin2 = LangevinStateSpace(initial_state, theta, ngp, observation_matrix, modelCase=noiseModel, rng=rng2)
+rng2 = np.random.default_rng(seed=100)
 
-mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), langevin2, rng=rng2, N=100)
-means, covs = mpf.run_filter(times, xs, 1e-5, progbar=True)
+ngp2 = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng2)
+langevin2 = LangevinStateSpace(initial_state, theta, ngp2, observation_matrix, modelCase=noiseModel, rng=rng2, truncation_level=1e-3)
+mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), langevin2, rng=rng2, N=500)
+means, covs = mpf.run_filter(times, xs, 1e-1, progbar=True)
 
 fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1)
 ax1.plot(times, xs)
