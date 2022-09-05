@@ -36,7 +36,7 @@ class MeanMixtureLevyProcess(base_processes.LevyProcess):
 class NormalTemperedStableProcess(MeanMixtureLevyProcess):
 
 	def __init__(self, alpha, beta, C, mu, mu_W, var_W, truncation=0.0, rng=np.random.default_rng()):
-		self.tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C, truncation = truncation, rng=rng)
+		self.tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C, truncation=truncation, rng=rng)
 		super().__init__(mu, mu_W, var_W, self.tsp, rng=rng)
 
 

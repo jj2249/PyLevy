@@ -99,16 +99,20 @@ class LangevinStateSpace(LinearSDEStateSpace):
     # model specific functors
     langevin_drift = lambda self, interval: np.exp(self.theta * interval) * np.array(
         [[0., 1. / self.theta], [0., 1.]]) + np.array([[1., -1. / self.theta], [0., 0.]])
+
     langevin_mean = lambda self, interval, jtime: np.exp(self.theta * (interval - jtime)) * np.atleast_2d(
         np.array([[1. / self.theta, 1]])).T + np.atleast_2d(np.array([[-1. / self.theta, 0.]])).T
+
     langevin_covar = lambda self, interval, jtime: np.exp(2. * self.theta * (interval - jtime)) * np.array(
         [[1. / (self.theta ** 2), 1. / self.theta], [1. / self.theta, 1.]])[:, :, np.newaxis] + np.exp(
         self.theta * (interval - jtime)) * np.array(
         [[-2. / (self.theta ** 2), -1. / self.theta], [-1. / self.theta, 0]])[:, :, np.newaxis] + np.array(
         [[1. / (self.theta ** 2), 0.], [0., 0.]])[:, :, np.newaxis]
+
     langevin_ext_covar = lambda self, interval: (np.exp(2. * self.theta * interval) - 1.0) * np.array(
         [[0.5 / (self.theta ** 3), 0.5 / (self.theta ** 2)], [0.5 / (self.theta ** 2), 0.5 / self.theta]]).reshape(
         (self.P, self.P)) + (np.exp(self.theta * interval) - 1.0) * np.array(
         [[-2. / (self.theta ** 3), -1. / (self.theta ** 2)], [-1. / (self.theta ** 2), 0.]]).reshape(
         (self.P, self.P)) + interval * np.array([[1 / (self.theta ** 2), 0], [0, 0]]).reshape((self.P, self.P))
+        
     langevin_noise_matrix = np.eye(2)

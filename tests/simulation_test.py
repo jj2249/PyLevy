@@ -4,12 +4,12 @@ from PyLevy.processes import base_processes
 
 plt.style.use('ggplot')
 
-alpha = 1.
+alpha = .5
 beta = 1.
 C = 1.
 
-gp = base_processes.GammaProcess(beta=beta, C=C)
-tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C)
+gp = base_processes.GammaProcess(beta=beta, C=C, truncation=1e-6)
+tsp = base_processes.TemperedStableProcess(alpha=alpha, beta=beta, C=C, truncation=1e-6)
 
 gammap_sample = gp.simulate_jumps()
 tsp_sample = tsp.simulate_jumps()
