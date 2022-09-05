@@ -72,11 +72,11 @@ class JumpLevyProcess(LevyProcess):
     def generate_marginal_samples(self, numSamples, tHorizon=1.0):
         return
 
-    def unit_expected_residual_jumps(self):
-        return 0.0
+    def unit_expected_residual_jumps(self, truncation):
+        return 0.
 
-    def unit_variance_residual_tempered_stable(self):
-        return 0.0
+    def unit_variance_residual_jumps(self, truncation):
+        return 0.
 
     def small_jump_covariance(self, truncation, case=3):
         if case == 1:
@@ -84,7 +84,7 @@ class JumpLevyProcess(LevyProcess):
             return 0.0, 0.0
         elif case == 2:
             """ Full Gaussian approximation """
-            return self.unit_expected_residual_jumps(truncation), self.unit_variance_residual_tempered_stable(truncation)
+            return self.unit_expected_residual_jumps(truncation), self.unit_variance_residual_jumps(truncation)
         elif case == 3:
             return self.unit_expected_residual_jumps(truncation), 0.0
         else:

@@ -92,7 +92,7 @@ class LinearSDEStateSpace:
 
 class LangevinStateSpace(LinearSDEStateSpace):
 
-    def __init__(self, initial_state, theta, driving_process, observation_matrix, modelCase=3, truncation_level=1e-6, rng=np.random.default_rng()):
+    def __init__(self, initial_state, theta, driving_process, observation_matrix, modelCase=1, truncation_level=1e-6, rng=np.random.default_rng()):
         self.theta = theta
         self.P = 2
         super().__init__(initial_state, self.langevin_drift, self.langevin_mean, self.langevin_covar, self.langevin_ext_covar,
