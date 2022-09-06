@@ -6,41 +6,43 @@ import matplotlib.pyplot as plt
 
 plt.style.use('ggplot')
 
-theta = -.2
+theta = -.9
 initial_state = np.atleast_2d(np.array([0., 0.])).T
 
 observation_matrix = np.atleast_2d(np.array([1., 0.]))
 observation_matrixd = np.atleast_2d(np.array([0., 1.]))
 
-alpha = 0.8
-beta = 1.
-C = 1.
-truncation = 1e-6
+alpha = 0.1
+beta = 10.
+C = .1
 mu = 0.
 mu_W = 0.
 var_W = 1.
-noiseModel = 2
+noiseModel = 1
 
-rng = np.random.default_rng(seed=2)
-ngp = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng)
+rngt = np.random.default_rng(seed=50)
+
+rng = np.random.default_rng(seed=1)
+ngp = NormalTemperedStableProcess(alpha, beta, C, mu, mu_W, var_W, rng=rng)
 langevin = LangevinStateSpace(initial_state, theta, ngp, observation_matrix, modelCase=noiseModel, rng=rng)
-times = rng.exponential(size=100).cumsum()
-xs = langevin.generate_observations(times, kv=1e-1)
+times = rngt.exponential(size=100).cumsum()
+xs = langevin.generate_observations(times, kv=1e-5)
 
-rngd = np.random.default_rng(seed=2)
-ngpd = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rngd)
+rngd = np.random.default_rng(seed=1)
+ngpd = NormalTemperedStableProcess(alpha, beta, C, mu, mu_W, var_W, rng=rngd)
 langevind = LangevinStateSpace(initial_state, theta, ngpd, observation_matrixd, modelCase=noiseModel, rng=rngd)
-xds = langevind.generate_observations(times, kv=1e-5)
+xds = langevind.generate_observations(times, kv=1e-10)
 
 
 rng2 = np.random.default_rng(seed=100)
+ngp = NormalTemperedStableProcess(alpha, beta, C, mu, mu_W, var_W, rng=rng2)
+langevin2 = LangevinStateSpace(initial_state, theta, ngp, observation_matrix, modelCase=noiseModel, rng=rng2)
 
-ngp2 = NormalTemperedStableProcess(alpha= alpha, beta=beta, C=C, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng2)
-langevin2 = LangevinStateSpace(initial_state, theta, ngp2, observation_matrix, modelCase=noiseModel, rng=rng2, truncation_level=1e-3)
 mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), langevin2, rng=rng2, N=500)
-means, covs = mpf.run_filter(times, xs, 1e-1, progbar=True)
-
+means, covs = mpf.run_filter(times, xs, 1e-5, progbar=True)
 fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1)
+ax1.fill_between(times, means[0] - 1.96*np.sqrt(covs[0,0]), means[0]+1.96*np.sqrt(covs[0,0]), alpha=0.4)
+ax2.fill_between(times, means[1] - 1.96*np.sqrt(covs[1,1]), means[1]+1.96*np.sqrt(covs[1,1]), alpha=0.4)
 ax1.plot(times, xs)
 ax2.plot(times, xds)
 ax1.plot(times, means[0])

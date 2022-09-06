@@ -41,7 +41,6 @@ class LinearSDEStateSpace:
 
     def get_model_Ce(self, interval):
         cov_constant = self.driving.subordinator.small_jump_covariance(truncation=self.truncation, case=self.noise_model)
-        # print(cov_constant)
         return (self.var_W * cov_constant[0] + (self.mu_W**2)*cov_constant[1]) * self.ext_covar(interval)
 
     def get_model_B(self):
@@ -60,21 +59,18 @@ class LinearSDEStateSpace:
         self.state = state
 
     def get_driving_jumps(self, rate, M=100, gamma_0=0.):
-        return self.driving.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0, truncation=self.truncation)
+        return self.driving.subordinator.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0, truncation=self.truncation)
 
     def increment_state(self, interval, M=100, gamma_0=0.):
-        jump_times, jump_sizes = self.get_driving_jumps(rate=1. / interval, M=M, gamma_0=gamma_0)
-        m_vec = self.get_model_m(interval, jump_times, jump_sizes)
+        jump_times, jump_sizes = self.get_driving_jumps(rate=1./interval, M=M, gamma_0=gamma_0)
+        m_vec = self.get_model_m(interval, jump_times, jump_sizes).squeeze()
         S_mat = self.get_model_S(interval, jump_times, jump_sizes)
         Ce = self.get_model_Ce(interval)
-        #print(Ce)
         try:
             C_mat = np.linalg.cholesky(S_mat + Ce)
-            e = C_mat @ self.rng.normal(size=S_mat.shape[1])
+            e = np.atleast_2d(m_vec + (C_mat @ self.rng.normal(size=S_mat.shape[1]))).T
         except np.linalg.LinAlgError:
-            e = np.zeros(S_mat.shape[1])
-
-        e = np.atleast_2d(e).T
+            e = np.atleast_2d(np.zeros(S_mat.shape[1])).T
         new_state = self.drift(interval) @ self.state + self.B @ e
         return new_state
 
@@ -108,7 +104,7 @@ class LangevinStateSpace(LinearSDEStateSpace):
     langevin_covar = lambda self, interval, jtime: np.exp(2. * self.theta * (interval - jtime)) * np.array(
         [[1. / (self.theta ** 2), 1. / self.theta], [1. / self.theta, 1.]])[:, :, np.newaxis] + np.exp(
         self.theta * (interval - jtime)) * np.array(
-        [[-2. / (self.theta ** 2), -1. / self.theta], [-1. / self.theta, 0]])[:, :, np.newaxis] + np.array(
+        [[2. / (self.theta ** 2), -1. / self.theta], [-1. / self.theta, 0.]])[:, :, np.newaxis] + np.array(
         [[1. / (self.theta ** 2), 0.], [0., 0.]])[:, :, np.newaxis]
 
     langevin_ext_covar = lambda self, interval: (np.exp(2. * self.theta * interval) - 1.0) * np.array(

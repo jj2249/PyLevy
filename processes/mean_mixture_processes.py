@@ -50,7 +50,7 @@ class NormalGammaProcess(MeanMixtureLevyProcess):
 class GeneralHyperbolicProcess(MeanMixtureLevyProcess):
 	# using GIG process
 	def __init__(self, delta, gamma, lambd, mu, mu_W, var_W, rng=np.random.default_rng()):
-		self.gig = base_processes.GIGProcess(delta=delta, gamma=gamma, lambd = lambd, rng=rng)
+		self.gig = base_processes.GIGProcess(delta=delta, gamma=gamma, lambd=lambd, rng=rng)
 		super().__init__(mu, mu_W, var_W, self.gig, rng=rng)
 
 

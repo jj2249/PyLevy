@@ -12,7 +12,7 @@ class KalmanFilter:
 	def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace, rng=np.random.default_rng()):
 		self.model = transition_model
 		self.a = np.atleast_2d(prior_mean).T
-		self.C = np.atleast_2d(prior_covar)
+		self.C = prior_covar
 		self.B = self.model.get_model_B()
 		self.H = self.model.get_model_H()
 
@@ -21,8 +21,8 @@ class KalmanFilter:
 		A = self.model.get_model_drift(interval)
 		m = self.model.get_model_m(interval, jtimes, jsizes)
 		S = self.model.get_model_S(interval, jtimes, jsizes)
-		full_noise_covar = S + self.model.get_model_Ce(interval)
 
+		full_noise_covar = S + self.model.get_model_Ce(interval)
 		predicted_mean = A @ self.a + m
 		predicted_covar = A @ self.C @ A.T + self.B @ full_noise_covar @ self.B.T
 
@@ -33,7 +33,7 @@ class KalmanFilter:
 		obs_noise = self.model.get_model_var_W() * kv
 		K = np.atleast_2d((self.C @ self.H.T) / ((self.H @ self.C @ self.H.T) + obs_noise))
 
-		corrected_mean = self.a + (K * (observation - self.H @ self.a))
+		corrected_mean = self.a + (K * (observation - (self.H @ self.a).squeeze()))
 		corrected_covar = self.C - (K @ self.H @ self.C)
 
 		return corrected_mean, corrected_covar
@@ -46,7 +46,7 @@ class FilterParticle(KalmanFilter):
 
 
 	def predict(self, interval):
-		jtimes, jsizes = self.model.get_driving_jumps(interval)
+		jtimes, jsizes = self.model.get_driving_jumps(rate=1./interval)
 		return self.predict_given_jumps(interval, jtimes, jsizes)
 
 
@@ -70,12 +70,12 @@ class MarginalParticleFilter:
 		self.lweights = np.atleast_2d(np.zeros(N))
 		self.N = N
 		self.P = prior_mean.shape[0]
+		self.rng = rng
 
 
 	def normalise_weights(self):
 		lsum_weights = logsumexp(self.lweights, lambda x: 1., np.ones(self.N), retlog=True)
 		lweights = self.lweights - lsum_weights
-		print(lsum_weights)
 		return lweights
 
 
@@ -105,14 +105,13 @@ class MarginalParticleFilter:
 		probabilites = np.exp(self.lweights)
 		probabilites = np.nan_to_num(probabilites)
 		probabilites = probabilites / np.sum(probabilites)
-
-		selections = self.rng.multinomial(self.N, probabilites)
+		selections = self.rng.multinomial(self.N, probabilites.squeeze())
 
 		new_particles = []
 		new_weights = -np.log(self.N)*np.atleast_2d(np.ones(self.N))
 		for idx in range(self.N):
 			for _ in range(selections[idx]):
-				new_particles.append(copy.copy(self.particles[idx]))
+				new_particles.append(copy(self.kalmans[idx]))
 		return new_weights, np.array(new_particles)
 
 
