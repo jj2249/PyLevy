@@ -5,7 +5,7 @@ from PyLevy.processes import base_processes
 plt.style.use('ggplot')
 
 alpha = .5
-beta = 1000.
+beta = 1.
 C = 1.
 
 gp = base_processes.GammaProcess(beta=beta, C=C)

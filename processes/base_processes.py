@@ -29,23 +29,46 @@ class JumpLevyProcess(LevyProcess):
         """
 		Simulate jump sizes and times using poisson epochs, a jump function and a thinning function
 		"""
-        x_seq = np.array([])
-        while x_seq.shape[0] == 0:
+        # x_seq = np.array([])
+        # while x_seq.shape[0] == 0:
+        #     epoch_seq = self.rng.exponential(scale=rate, size=M)
+        #     epoch_seq[0] += gamma_0
+        #     epoch_seq = epoch_seq.cumsum()
+        #     x_seq = h_func(epoch_seq)
+        #     if truncation == 0.0:
+        #         break
+        #     elif (floor(log10(x_seq)) == log10(truncation)).nonzero():
+        #         x_seq = x_seq[x_seq >= truncation]
+        #     else:
+        #         x_seq = np.array([])
+        # acceptance_seq = thinning_func(x_seq)
+        # u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
+        # x_seq = x_seq[u < acceptance_seq]
+        # times = self.rng.uniform(low=0.0, high=1. / rate, size=x_seq.size)
+        # print(x_seq.shape)
+        # return times, x_seq
+
+        min_jump = np.inf
+        x = []
+        curr_epoch = gamma_0
+        while min_jump >= truncation:
             epoch_seq = self.rng.exponential(scale=rate, size=M)
-            epoch_seq[0] += gamma_0
+            epoch_seq[0] += curr_epoch
             epoch_seq = epoch_seq.cumsum()
+            curr_epoch = epoch_seq[-1]
             x_seq = h_func(epoch_seq)
-            if truncation == 0.0:
-                break
-            elif (floor(log10(x_seq)) == log10(truncation)).nonzero():
-                x_seq = x_seq[x_seq >= truncation]
+            min_jump = x_seq[-1]
+            if min_jump < truncation:
+                x.append(x_seq[x_seq >= truncation])
             else:
-                x_seq = np.array([])
-        acceptance_seq = thinning_func(x_seq)
-        u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
-        x_seq = x_seq[u < acceptance_seq]
-        times = self.rng.uniform(low=0.0, high=1. / rate, size=x_seq.size)
-        return times, x_seq
+                x.append(x_seq)
+        x = np.concatenate(x)
+        acceptance_seq = thinning_func(x)
+        u = self.rng.uniform(low=0., high=1., size=x.size)
+        x = x[u < acceptance_seq]
+        jtimes = self.rng.uniform(low=0., high=1. / rate, size=x.size)
+        # print(x.shape)
+        return jtimes, x
 
     def generate_marginal_samples(self, numSamples, tHorizon=1.0):
         return
