@@ -11,6 +11,7 @@ gamma = 0.5
 lambd = -0.2
 nSamples = 1000
 
+
 endp = []
 gig = base_processes.GIGProcess(delta=delta, gamma=gamma, lambd=lambd)
 samps = gig.generate_marginal_samples(numSamples=nSamples)

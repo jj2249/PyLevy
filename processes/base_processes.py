@@ -38,14 +38,14 @@ class JumpLevyProcess(LevyProcess):
         #     if truncation == 0.0:
         #         break
         #     elif (floor(log10(x_seq)) == log10(truncation)).nonzero():
-        #         x_seq = x_seq[x_seq >= truncation]W
+        #         x_seq = x_seq[x_seq >= truncation]
         #     else:
         #         x_seq = np.array([])
-        # print(x_seq[-1], x_seq.shape)
         # acceptance_seq = thinning_func(x_seq)
         # u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
         # x_seq = x_seq[u < acceptance_seq]
         # times = self.rng.uniform(low=0.0, high=1. / rate, size=x_seq.size)
+        # print(x_seq.shape)
         # return times, x_seq
 
         min_jump = np.inf
@@ -59,14 +59,15 @@ class JumpLevyProcess(LevyProcess):
             x_seq = h_func(epoch_seq)
             min_jump = x_seq[-1]
             if min_jump < truncation:
-                x.append(x_seq[x_seq>=truncation])
+                x.append(x_seq[x_seq >= truncation])
             else:
                 x.append(x_seq)
         x = np.concatenate(x)
         acceptance_seq = thinning_func(x)
         u = self.rng.uniform(low=0., high=1., size=x.size)
-        x = x [u<acceptance_seq]
-        jtimes = self.rng.uniform(low=0., high=1./rate, size=x.size)
+        x = x[u < acceptance_seq]
+        jtimes = self.rng.uniform(low=0., high=1. / rate, size=x.size)
+        # print(x.shape)
         return jtimes, x
 
     def generate_marginal_samples(self, numSamples, tHorizon=1.0):
@@ -275,7 +276,7 @@ class GIGProcess(JumpLevyProcess):
         X = X.reshape((1, X.shape[0]))
         return X[0]
 
-    def simulate_jumps(self, rate=1., M=2000, gamma_0=0., truncation=1e-6):
+    def simulate_jumps(self, rate=1., M=2000, gamma_0=0., truncation=0.):
         if np.abs(self.lambd) >= 0.5:
             simulator = self.SimpleSimulator(self, rng=self.rng)
             jtimes, jsizes = simulator.simulate_internal_jumps(rate, M, gamma_0, truncation)
@@ -417,6 +418,7 @@ class GIGProcess(JumpLevyProcess):
 
         def simulate_internal_jumps(self, rate, M, gamma_0, truncation):
             _, x = self.q2.simulate_jumps(rate, M, gamma_0, truncation)
+            _, x = self.accept_reject_simulation(x, x, thinning_func=lambda xs: gammaincc(0.5, (self.z0 ** 2) * xs / (2 * self.outer.delta ** 2)), rate=rate)
             z = self.__generate_z(x)
             jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
             return jtimes, jsizes
@@ -425,8 +427,3 @@ class GIGProcess(JumpLevyProcess):
             def __init__(self, outer, z0, H0, rng=np.random.default_rng()):
                 super().__init__(beta=(outer.gamma ** 2) / 2., alpha=0.5,
                                  C=np.sqrt(2 * outer.delta ** 2) * gammafnc(0.5) / ((np.pi ** 2) * H0))
-                self.outer = outer
-                self.z0 = z0
-
-            def thinning_func(self, x):
-                return gammaincc(0.5, (self.z0 ** 2) * x / (2 * self.outer.delta ** 2))
