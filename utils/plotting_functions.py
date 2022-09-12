@@ -98,3 +98,17 @@ def histogramplot(rvs, pdf_vals, num_bins = 100, xlabel="", ylabel="", plottitle
     binvals, _, _ = plt.hist(x1, num_bins, density=True, label="Histogram of Process at $t = T_{horizon}$")
     ax.plot(np.linspace(min(x1), max(x1), len(x1)), pdf_vals, label=plottlabel)
     ax.legend()
+
+
+def plot_filtering_results(times, x, x_dot, estimated_signal):
+    fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1)
+    ax1.plot(times, x, label="True Signal")
+    ax2.plot(times, x_dot, label="True Signal")
+    ax1.plot(times, estimated_signal[0], label="Estimated Signal")
+    ax2.plot(times, estimated_signal[1], label="Estimated Signal")
+    ax2.set_xlabel("Time")
+    ax2.set_ylabel("Acceleration")
+    ax1.set_ylabel("Velocity")
+    ax1.legend()
+    ax2.legend()
+    plt.show()

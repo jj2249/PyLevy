@@ -4,7 +4,7 @@ import numpy as np
 class LinearSDEStateSpace:
 
     def __init__(self, initial_state, model_drift, model_mean, model_covar, model_ext_covar, model_noise_matrix, driving_process,
-                 observation_matrix, modelCase=1, truncation_level=1e-6, rng=np.random.default_rng()):
+                 observation_matrix, modelCase=1, truncation_level=1e-8, rng=np.random.default_rng()):
         """
         - model drift = e^A(t-u)
         - model mean = e^A(t-u) h
@@ -34,6 +34,7 @@ class LinearSDEStateSpace:
         return self.drift(interval)
 
     def get_model_m(self, interval, jump_times, jump_sizes):
+        # m should contain NOT mu_W if marginalising wrt mu_W
         return np.atleast_2d((self.mu_W * jump_sizes * self.mean(interval, jump_times)).sum(axis=-1)).T
 
     def get_model_S(self, interval, jump_times, jump_sizes):
@@ -58,21 +59,22 @@ class LinearSDEStateSpace:
     def set_state(self, state):
         self.state = state
 
-    def get_driving_jumps(self, rate, M=100, gamma_0=0.):
+    def get_driving_jumps(self, rate, M=2000, gamma_0=0.):
         return self.driving.subordinator.simulate_jumps(rate=rate, M=M, gamma_0=gamma_0, truncation=self.truncation)
 
-    def increment_state(self, interval, M=100, gamma_0=0.):
+    def increment_state(self, interval, M=2000, gamma_0=0.):
         jump_times, jump_sizes = self.get_driving_jumps(rate=1./interval, M=M, gamma_0=gamma_0)
-        m_vec = self.get_model_m(interval, jump_times, jump_sizes).squeeze()
-        S_mat = self.get_model_S(interval, jump_times, jump_sizes)
+        m_vec = self.get_model_m(interval=interval, jump_times=jump_times, jump_sizes=jump_sizes).squeeze()
+        S_mat = self.get_model_S(interval=interval, jump_times=jump_times, jump_sizes=jump_sizes)
         Ce = self.get_model_Ce(interval)
         try:
             C_mat = np.linalg.cholesky(S_mat + Ce)
             e = np.atleast_2d(m_vec + (C_mat @ self.rng.normal(size=S_mat.shape[1]))).T
         except np.linalg.LinAlgError:
             e = np.atleast_2d(np.zeros(S_mat.shape[1])).T
+
         new_state = self.drift(interval) @ self.state + self.B @ e
-        return new_state
+        return new_state, m_vec, S_mat + Ce
 
     def observe_in_noise(self, kv):
         return (self.H @ self.state + np.sqrt(self.var_W * kv) * self.rng.normal()).item()
@@ -80,10 +82,14 @@ class LinearSDEStateSpace:
     def generate_observations(self, times, kv):
         intervals = np.diff(times)
         observations = [self.observe_in_noise(kv)]
+        ms = []
+        Ss = []
         for diff in intervals:
-            self.state = self.increment_state(diff)
+            self.state, m, S = self.increment_state(diff)
+            ms.append(m)
+            Ss.append(S)
             observations.append(self.observe_in_noise(kv))
-        return observations
+        return observations, ms, Ss
 
 
 class LangevinStateSpace(LinearSDEStateSpace):
