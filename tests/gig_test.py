@@ -8,7 +8,7 @@ plt.style.use('ggplot')
 
 delta = 3.
 gamma = 0.5
-lambd = -0.2
+lambd = -1.
 nSamples = 1000
 
 
@@ -19,7 +19,7 @@ samps = gig.generate_marginal_samples(numSamples=nSamples)
 fig, ax1 = plt.subplots(nrows=1, ncols=1)
 axis = np.linspace(0., 1., nSamples)
 for i in range(nSamples):
-    gig_sample = gig.simulate_jumps(M=2000, truncation=1e-8)
+    gig_sample = gig.simulate_jumps(M=2000, truncation=0.)
     endpoint = np.sum(gig_sample[1])
     endp.append(endpoint)
 

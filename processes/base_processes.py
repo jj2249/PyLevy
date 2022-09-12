@@ -62,11 +62,12 @@ class JumpLevyProcess(LevyProcess):
                 x.append(x_seq[x_seq >= truncation])
             else:
                 x.append(x_seq)
+
         x = np.concatenate(x)
         acceptance_seq = thinning_func(x)
         u = self.rng.uniform(low=0., high=1., size=x.size)
         x = x[u < acceptance_seq]
-        jtimes = self.rng.uniform(low=0., high=1./rate, size=x.size)
+        jtimes = self.rng.uniform(low=0., high=1. / rate, size=x.size)
         # print(x.shape)
         return jtimes, x
 
@@ -119,7 +120,7 @@ class GammaProcess(JumpLevyProcess):
     def thinning_func(self, x):
         return (1. + self.beta * x) * np.exp(-self.beta * x)
 
-    def simulate_jumps(self, rate=1.0, M=100, gamma_0=0.0, truncation=1e-6):
+    def simulate_jumps(self, rate=1.0, M=1000, gamma_0=0.0, truncation=1e-6):
         return self.accept_reject_simulation(self.h_func, self.thinning_func, rate, M, gamma_0, truncation)
 
     def unit_expected_residual_jumps(self, truncation):
@@ -145,8 +146,8 @@ class TemperedStableProcess(JumpLevyProcess):
         beta = gamma**(1/kappa)/2.0
         C  = delta * (2 ** kappa) * kappa * (1 / gammafnc(1 - kappa))
         """
-        assert(0. < alpha < 1.)
-        assert(C>0.0 and beta >= 0.0)
+        assert (0. < alpha < 1.)
+        assert (C > 0.0 and beta >= 0.0)
         self.alpha = alpha
         self.beta = beta
         self.C = C
@@ -160,7 +161,7 @@ class TemperedStableProcess(JumpLevyProcess):
     def thinning_func(self, x):
         return np.exp(-self.beta * x)
 
-    def simulate_jumps(self, rate=1.0, M=100, gamma_0=0., truncation=1e-6):
+    def simulate_jumps(self, rate=1.0, M=1000, gamma_0=0., truncation=1e-6):
         return self.accept_reject_simulation(self.h_func, self.thinning_func, rate, M, gamma_0, truncation)
 
     def unit_expected_residual_jumps(self, truncation):
@@ -314,16 +315,14 @@ class GIGProcess(JumpLevyProcess):
         lambd = self.lambd
         delta = self.delta
         if np.abs(lambd) < 0.5:
-            return delta * truncation* np.sqrt((2. * truncation) / (3.*np.pi))
+            return delta * truncation * np.sqrt((2. * truncation) / (3. * np.pi))
         else:
             a = np.pi * np.power(2.0, (1.0 - 2.0 * np.abs(lambd)))
             b = gammafnc(np.abs(lambd)) ** 2
             c = 1 / (1 - 2 * np.abs(lambd))
             z1 = (a / b) ** c
             H0 = z1 * hankel_squared(np.abs(lambd), z1)
-            return  2 * delta * truncation * np.sqrt((2. * truncation) / np.pi) / (3.*np.pi * H0)
-
-
+            return 2 * delta * truncation * np.sqrt((2. * truncation) / np.pi) / (3. * np.pi * H0)
 
     class SimpleSimulator(JumpLevyProcess):
         def __init__(self, outer, rng=np.random.default_rng()):
@@ -418,7 +417,8 @@ class GIGProcess(JumpLevyProcess):
 
         def simulate_internal_jumps(self, rate, M, gamma_0, truncation):
             _, x = self.q2.simulate_jumps(rate, M, gamma_0, truncation)
-            _, x = self.accept_reject_simulation(x, x, thinning_func=lambda xs: gammaincc(0.5, (self.z0 ** 2) * xs / (2 * self.outer.delta ** 2)), rate=rate)
+            _, x = self.accept_reject_simulation(x, x, thinning_func=lambda xs: gammaincc(0.5, (self.z0 ** 2) * xs / (
+                        2 * self.outer.delta ** 2)), rate=rate)
             z = self.__generate_z(x)
             jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
             return jtimes, jsizes
