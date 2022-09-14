@@ -7,7 +7,7 @@ from PyLevy.processes import base_processes
 plt.style.use('ggplot')
 
 t1 = 1e-1
-t2 = 2.01e-1
+t2 = 5.01e-1
 beta = 1.0
 C = 10.
 nSamples = 1000

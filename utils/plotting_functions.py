@@ -100,12 +100,18 @@ def histogramplot(rvs, pdf_vals, num_bins = 100, xlabel="", ylabel="", plottitle
     ax.legend()
 
 
-def plot_filtering_results(times, x, x_dot, estimated_signal):
+def plot_filtering_results(times, observations, x, x_dot, estimated_signal, estimated_stds, std_width = 2.58):
     fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1)
-    ax1.plot(times, x, label="True Signal")
-    ax2.plot(times, x_dot, label="True Signal")
-    ax1.plot(times, estimated_signal[0], label="Estimated Signal")
-    ax2.plot(times, estimated_signal[1], label="Estimated Signal")
+    ax1.scatter(times, observations, s=6, label="Velocity Observations")
+    ax1.plot(times, x, linestyle='dashed', label="True Velocity")
+    ax2.plot(times, x_dot, linestyle='dashed', label="True Acceleration")
+    ax1.plot(times, estimated_signal[0], linestyle='dashed', label="Estimated Velocity")
+    ax2.plot(times, estimated_signal[1], linestyle='dashed', label="Estimated Acceleration")
+    ax1.fill_between(times, x - std_width * estimated_stds[0],
+                     x + std_width * estimated_stds[0], color="#bca89f")
+    ax2.fill_between(times, x_dot - std_width * estimated_stds[1],
+                     x_dot + std_width * estimated_stds[1],
+                     label="$\pm 3$ standard deviations", color="#bca89f")
     ax2.set_xlabel("Time")
     ax2.set_ylabel("Acceleration")
     ax1.set_ylabel("Velocity")

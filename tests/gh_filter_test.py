@@ -24,26 +24,27 @@ truncation = 1e-6
 
 rngt = np.random.default_rng(seed=50)
 
-rng = np.random.default_rng(seed=4)
+rng = np.random.default_rng(seed=1)
 ghp = GeneralHyperbolicProcess(delta=delta, lambd=lambd, gamma=gamma, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng)
 langevin = LangevinStateSpace(initial_state, theta, ghp, observation_matrix, truncation_level=truncation,
                               modelCase=noiseModel, rng=rng)
 times = rngt.exponential(size=100).cumsum()
-xs,_,_ = langevin.generate_observations(times, kv=1e-15)
+x, ms, Ss = langevin.generate_observations(times, kv=1e-1)
 
-rngd = np.random.default_rng(seed=4)
-ghpd = GeneralHyperbolicProcess(delta=delta, lambd=lambd, gamma=gamma, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng)
-langevind = LangevinStateSpace(initial_state, theta, ghpd, observation_matrixd, truncation_level=truncation,
-                               modelCase=noiseModel, rng=rngd)
-xds, ms, Ss = langevind.generate_observations(times, kv=1e-15)
 
-rng2 = np.random.default_rng(seed=2)
+observations = x[0]
+xs = x[1]
+xds = x[2]
+
+rng2 = np.random.default_rng(seed=100)
 ghp = GeneralHyperbolicProcess(delta=delta, lambd=lambd, gamma=gamma, mu=mu, mu_W=mu_W, var_W=var_W, rng=rng)
 langevin2 = LangevinStateSpace(initial_state, theta, ghp, observation_matrix, truncation_level=truncation,
                                modelCase=noiseModel, rng=rng2)
 
-mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), langevin2, rng=rng2, N=500)
-means, covs = mpf.run_filter(times, xs, 1e-15, ms=ms, Ss=Ss, progbar=True)
+kv = 1e-1
+mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), transition_model=langevin2, rng=rng2, N=500)
+means, covs = mpf.run_filter(times, observations, kv, ms=ms, Ss=Ss, progbar=True)
 
-plot_filtering_results(times, xs, xds, means)
+stds = [covs[0,0], covs[1,1]]
 
+plot_filtering_results(times, observations, xs, xds, means, stds)
