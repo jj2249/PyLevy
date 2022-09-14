@@ -1,41 +1,25 @@
-from PyLevy.utils.maths_functions import logsumexp, log, gammafnc
+from PyLevy.utils.maths_functions import logsumexp, log, gammafnc, exp
 from PyLevy.statespace.statespace import LinearSDEStateSpace
+from scipy.stats import kstest
+from PyLevy.utils.plotting_functions import qqplot
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from p_tqdm import t_map
 from functools import partial
 from copy import deepcopy
 
-
-class KalmanFilterTest:
-
-    def __init__(self, prior_mean, prior_covar, B, H, rng=np.random.default_rng()):
-        self.a = np.atleast_2d(prior_mean).T
-        self.C = prior_covar
-        self.B = B
-        self.H = H
-
-    def predict_given_jumps(self, A, full_noise_covar):
-        self.a = A @ self.a
-        self.C = A @ self.C @ A.T + self.B @ full_noise_covar @ self.B.T
-
-        return self.a, self.C
-
-    def correct(self, observation, obs_noise):
-        K = np.atleast_2d((self.C @ self.H.T) / ((self.H @ self.C @ self.H.T) + obs_noise))
-        self.a = self.a + (K * (observation - (self.H @ self.a).squeeze()))
-        self.C = self.C - (K @ self.H @ self.C)
+import numpy as np
 
 
 class KalmanFilter:
 
-    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace, rng=np.random.default_rng()):
+    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace):
         self.model = transition_model
         self.a = np.atleast_2d(prior_mean).T
         self.C = prior_covar
         self.B = self.model.get_model_B()
         self.H = self.model.get_model_H()
-
 
     def predict_given_jumps(self, interval, jtimes, jsizes, m=None, S=None):
         A = self.model.get_model_drift(interval)
@@ -60,8 +44,8 @@ class KalmanFilter:
 
 class FilterParticle(KalmanFilter):
 
-    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace, rng=np.random.default_rng()):
-        super().__init__(prior_mean, prior_covar, transition_model, rng)
+    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace):
+        super().__init__(prior_mean, prior_covar, transition_model)
 
     def predict(self, interval, m=None, S=None):
         jtimes, jsizes = self.model.get_driving_jumps(rate=1. / interval)
@@ -71,7 +55,7 @@ class FilterParticle(KalmanFilter):
         obs_noise = self.model.get_model_var_W() * kv
         F_N = np.squeeze(self.H @ self.C @ self.H.T + obs_noise)
         wt = observation - np.squeeze(self.H @ self.a)
-        return -0.5 * log(abs(F_N)) + 0.5 * (wt ** 2) / (self.model.get_model_var_W() * F_N)
+        return -0.5 * log(abs(F_N)) - 0.5 * (wt ** 2) / (self.model.get_model_var_W() * F_N)
 
     def increment(self, interval, observation, kv, m=None, S=None):
         self.a, self.C = self.predict(interval, m=m, S=S)
@@ -81,10 +65,10 @@ class FilterParticle(KalmanFilter):
 
 class MarginalParticleFilter:
 
-    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace, N=500, resample_rate=0.85,
+    def __init__(self, prior_mean, prior_covar, transition_model: LinearSDEStateSpace, N=500, resample_rate=0.5,
                  rng=np.random.default_rng()):
         self.log_resample_limit = np.log(N * resample_rate)
-        self.kalmans = np.array([FilterParticle(prior_mean, prior_covar, transition_model, rng=rng) for _ in range(N)])
+        self.kalmans = np.array([FilterParticle(prior_mean, prior_covar, transition_model=transition_model) for _ in range(N)])
         self.lweights = np.atleast_2d(np.zeros(N))
         self.N = N
         self.P = prior_mean.shape[0]
@@ -110,7 +94,8 @@ class MarginalParticleFilter:
     def get_state_posterior(self):
         eX = np.array([particle.a for particle in self.kalmans])
         msum = logsumexp(self.lweights, lambda x: x, eX, axis=0, retlog=False)
-        eXXt = np.array([particle.C + (particle.a @ particle.a.T) for particle in self.kalmans])
+        eXXt = np.array(
+            [particle.C + (particle.a @ particle.a.T) for particle in self.kalmans])
         Covsum = logsumexp(self.lweights, lambda x: x, eXXt, axis=0, retlog=False) - msum @ msum.T
         return msum, Covsum
 
@@ -118,10 +103,10 @@ class MarginalParticleFilter:
         """ Adapted from filterpy.monte_carlo.stratified_resample """
         N_p = self.N
         u = np.zeros((N_p, 1))
-        c = np.cumsum(np.exp(self.lweights))
+        c = np.cumsum(exp(self.lweights))
         c[-1] = 1.0
         i = 0
-        u[0] = np.random.rand() / N_p
+        u[0] = self.rng.random() / N_p
         new_kfs = [0] * N_p
         for j in range(N_p):
 
@@ -133,12 +118,14 @@ class MarginalParticleFilter:
             new_kfs[j] = deepcopy(self.kalmans[i])
 
         log_weights = np.array([-np.log(N_p)] * N_p)
-        return log_weights, new_kfs
+        return np.atleast_2d(log_weights), new_kfs
 
     def run_filter(self, times, observations, kv, ms, Ss, progbar=False):
         curr_t = times[0]
         means = np.zeros((self.P, 1, times.shape[0]))
         covs = np.empty((self.P, self.P, times.shape[0]))
+        normRV = np.atleast_2d(self.rng.normal(size=self.P)).T
+        means[:, :, 0] = np.zeros(shape=(self.P,1))
         covs[:, :, 0] = np.eye(self.P)
         for idx in tqdm(range(1, times.shape[0]), disable=not progbar):
             if self.get_logDninf() < self.log_resample_limit:

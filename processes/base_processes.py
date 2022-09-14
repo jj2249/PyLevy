@@ -29,25 +29,6 @@ class JumpLevyProcess(LevyProcess):
         """
 		Simulate jump sizes and times using poisson epochs, a jump function and a thinning function
 		"""
-        # x_seq = np.array([])
-        # while x_seq.shape[0] == 0:
-        #     epoch_seq = self.rng.exponential(scale=rate, size=M)
-        #     epoch_seq[0] += gamma_0
-        #     epoch_seq = epoch_seq.cumsum()
-        #     x_seq = h_func(epoch_seq)
-        #     if truncation == 0.0:
-        #         break
-        #     elif (floor(log10(x_seq)) == log10(truncation)).nonzero():
-        #         x_seq = x_seq[x_seq >= truncation]
-        #     else:
-        #         x_seq = np.array([])
-        # acceptance_seq = thinning_func(x_seq)
-        # u = self.rng.uniform(low=0.0, high=1.0, size=x_seq.size)
-        # x_seq = x_seq[u < acceptance_seq]
-        # times = self.rng.uniform(low=0.0, high=1. / rate, size=x_seq.size)
-        # print(x_seq.shape)
-        # return times, x_seq
-
         min_jump = np.inf
         x = []
         curr_epoch = gamma_0
@@ -68,7 +49,6 @@ class JumpLevyProcess(LevyProcess):
         u = self.rng.uniform(low=0., high=1., size=x.size)
         x = x[u < acceptance_seq]
         jtimes = self.rng.uniform(low=0., high=1. / rate, size=x.size)
-        # print(x.shape)
         return jtimes, x
 
     def generate_marginal_samples(self, numSamples, tHorizon=1.0):
@@ -315,14 +295,14 @@ class GIGProcess(JumpLevyProcess):
         lambd = self.lambd
         delta = self.delta
         if np.abs(lambd) < 0.5:
-            return delta * truncation * np.sqrt((2. * truncation) / (3. * np.pi))
+            return delta * truncation * np.sqrt((2. * truncation) /np.pi)/3.
         else:
             a = np.pi * np.power(2.0, (1.0 - 2.0 * np.abs(lambd)))
             b = gammafnc(np.abs(lambd)) ** 2
             c = 1 / (1 - 2 * np.abs(lambd))
             z1 = (a / b) ** c
             H0 = z1 * hankel_squared(np.abs(lambd), z1)
-            return 2 * delta * truncation * np.sqrt((2. * truncation) / np.pi) / (3. * np.pi * H0)
+            return 2 * delta * truncation * np.sqrt((2. * truncation) / np.pi) / (3.*np.pi * H0)
 
     class SimpleSimulator(JumpLevyProcess):
         def __init__(self, outer, rng=np.random.default_rng()):
