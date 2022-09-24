@@ -10,22 +10,26 @@ plt.style.use('ggplot')
 
 t1 = 0.0
 t2 = 1.0
-kappa = 0.1
+kappa = 0.5
 gamma = 1.35
 delta = 1.
 beta = gamma ** (1 / kappa) / 2.0
 C = delta * (2 ** kappa) * kappa * (1 / gammafnc(1 - kappa))
-print(kappa, beta, C)
+
 ts = base_processes.TemperedStableProcess(alpha=kappa, beta=beta, C=C)
-nSamples = 1000
+nSamples = 10000
 endp = []
+
 fig, ax1 = plt.subplots(nrows=1, ncols=1)
-
 for i in tqdm(range(nSamples)):
-    _, ts_sample = ts.simulate_jumps(M=2000,  truncation=1e-8)
+    _, ts_sample = ts.simulate_jumps(M=2000,  truncation=1e-10)
     endp.append(np.sum(ts_sample))
-
 samps = ts.generate_marginal_samples(numSamples=nSamples, tHorizon=t2-t1)
-qqplot(samps, endp)
-print(kstest(samps, endp))
-plt.show()
+
+pgf =True
+title = "Q-Q plot for TS Process with $\kappa, \gamma, \delta = " + str(kappa)+" ,"+ str(round(gamma, 3)) + " ," + str(delta) + "$"
+qqplot(samps, endp, xlabel="True RVs", ylabel="TS Random Variables at $t = T_{horizon}$", plottitle=title, isPGF=pgf)
+if pgf:
+    plt.savefig("TSSimulationQQPlot.pgf", bbox_inches = "tight")
+else:
+    plt.show()

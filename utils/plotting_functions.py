@@ -1,9 +1,32 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import numbers
 
-def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False, 
-           rug_length=0.05, rug_kwargs=None, font_size=14, title_size=14, **kwargs):
+
+def plot_path(time_ax, paths, title="Sample Paths", isPGF=False, fig=None, ax=None):
+    plt.style.use('ggplot')
+    if isPGF:
+        matplotlib.use("pgf")
+        matplotlib.rcParams.update({
+            "pgf.texsystem": "pdflatex",
+            'font.family': 'serif',
+            'text.usetex': True,
+            'pgf.rcfonts': False,
+        })
+    else:
+        plt.style.use('ggplot')
+    if (fig and ax) is None:
+        fig, ax = plt.subplots()
+    for path in paths:
+        ax.step(time_ax, path, lw=1.2)
+
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Position")
+    ax.set_title(title)
+
+def qqplot(x, y, xlabel="", ylabel="", plottitle="", quantiles=None, interpolation='nearest', ax=None, rug=False,
+           rug_length=0.05, rug_kwargs=None, font_size=14, title_size=14, log=True, isPGF=False, **kwargs):
     """Draw a quantile-quantile plot for `x` versus `y`.
 
     Parameters
@@ -41,6 +64,15 @@ def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False,
         Keyword arguments to pass to matplotlib.axes.Axes.scatter() when drawing
         the q-q plot.
     """
+    plt.style.use('ggplot')
+    if isPGF:
+        matplotlib.use("pgf")
+        matplotlib.rcParams.update({
+            "pgf.texsystem": "pdflatex",
+            'font.family': 'serif',
+            'text.usetex': True,
+            'pgf.rcfonts': False,
+        })
     plt.rc('font', size=font_size)
     plt.rc('axes', titlesize=title_size)
     x1 = x
@@ -81,40 +113,61 @@ def qqplot(x, y, quantiles=None, interpolation='nearest', ax=None, rug=False,
         np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
     ]
     # now plot both limits against each other
-    ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="45 degree line")
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.legend()
-
-
-def histogramplot(rvs, pdf_vals, num_bins = 100, xlabel="", ylabel="", plottitle="", plottlabel="", ax=None):
-    """ Function to compare generated process with density at t = T_{horizon} """
-    if ax is None:
-        ax = plt.gca()
-    x1 = rvs
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(plottitle)
-    binvals, _, _ = plt.hist(x1, num_bins, density=True, label="Histogram of Process at $t = T_{horizon}$")
-    ax.plot(np.linspace(min(x1), max(x1), len(x1)), pdf_vals, label=plottlabel)
+    ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="Line of Equality")
+    if log:
+        ax.set_xscale('log')
+        ax.set_yscale('log')
     ax.legend()
 
 
-def plot_filtering_results(times, observations, x, x_dot, estimated_signal, estimated_stds, std_width = 2.58):
+def histogramplot(rvs, pdf_vals, axis, num_bins = 100, xlabel="", ylabel="", plottitle="", plottlabel="", ax=None, isPGF=False):
+    """ Function to compare generated process with density at t = T_{horizon} """
+    plt.style.use('ggplot')
+    if isPGF:
+        matplotlib.use("pgf")
+        matplotlib.rcParams.update({
+            "pgf.texsystem": "pdflatex",
+            'font.family': 'serif',
+            'text.usetex': True,
+            'pgf.rcfonts': False,
+        })
+    if ax is None:
+        ax = plt.gca()
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(plottitle)
+    binvals, _, _ = plt.hist(rvs, num_bins, density=True, label="Histogram of Process at $t = T_{horizon}$")
+    ax.plot(axis, pdf_vals, label=plottlabel)
+
+
+def plot_filtering_results(times, observations, x, x_dot, estimated_signal, estimated_stds, std_width = 2.58, isPGF=False):
+    plt.style.use('ggplot')
+    if isPGF:
+        matplotlib.use("pgf")
+        matplotlib.rcParams.update({
+            "pgf.texsystem": "pdflatex",
+            'font.family': 'serif',
+            'text.usetex': True,
+            'pgf.rcfonts': False,
+        })
     fig, [ax1, ax2] = plt.subplots(nrows=2, ncols=1)
+    fig.set_size_inches(14, 8)
+    fig.tight_layout()
     ax1.scatter(times, observations, s=6, label="Velocity Observations")
     ax1.plot(times, x, linestyle='dashed', label="True Velocity")
     ax2.plot(times, x_dot, linestyle='dashed', label="True Acceleration")
     ax1.plot(times, estimated_signal[0], linestyle='dashed', label="Estimated Velocity")
     ax2.plot(times, estimated_signal[1], linestyle='dashed', label="Estimated Acceleration")
-    ax1.fill_between(times, x - std_width * estimated_stds[0],
-                     x + std_width * estimated_stds[0], color="#bca89f")
-    ax2.fill_between(times, x_dot - std_width * estimated_stds[1],
-                     x_dot + std_width * estimated_stds[1],
+    ax1.fill_between(times, estimated_signal[0] - std_width * estimated_stds[0],
+                     estimated_signal[0] + std_width * estimated_stds[0], color="#bca89f")
+    ax2.fill_between(times, estimated_signal[1] - std_width * estimated_stds[1],
+                     estimated_signal[1] + std_width * estimated_stds[1],
                      label="$\pm 3$ standard deviations", color="#bca89f")
     ax2.set_xlabel("Time")
     ax2.set_ylabel("Acceleration")
     ax1.set_ylabel("Velocity")
     ax1.legend()
     ax2.legend()
-    plt.show()

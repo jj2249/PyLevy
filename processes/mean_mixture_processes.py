@@ -24,6 +24,15 @@ class MeanMixtureLevyProcess(base_processes.LevyProcess):
             size=subordinator_sample[1].shape)
         return jtimes, jsizes
 
+    def simulate_small_jumps(self, rate=1.0, M=2000, gamma_0=0., truncation=1e-6):
+        subordinator_sample = self.subordinator.simulate_jumps(rate, M, gamma_0, truncation=0.)
+        jtimes = subordinator_sample[0]
+        jumps = subordinator_sample[1]
+        sub_jumps = jumps[jumps < truncation]
+        jsizes = self.mu_W * sub_jumps + self.std_W * np.sqrt(sub_jumps) * self.rng.normal(
+            size=sub_jumps.shape)
+        return jtimes, jsizes
+
     def simulate_path(self, observation_times):
         mean_mix_jtimes, mean_mix_jsizes = self.simulate_jumps()
         integrated_process = self.integrate(observation_times, mean_mix_jtimes, mean_mix_jsizes, drift=self.mu)

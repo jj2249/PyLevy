@@ -43,6 +43,8 @@ class JumpLevyProcess(LevyProcess):
                 x.append(x_seq[x_seq >= truncation])
             else:
                 x.append(x_seq)
+            if truncation == 0.:
+                break
 
         x = np.concatenate(x)
         acceptance_seq = thinning_func(x)
@@ -197,26 +199,25 @@ class GIGProcess(JumpLevyProcess):
         """
 
         """ Which parameter is scaled by TIME ??? """
-
         a = (self.gamma) ** 2
         b = (self.delta) ** 2
-        lambd = self.lambd
+        lambd = (self.lambd)
         omega = np.sqrt(a * b)
         swap = False
         if lambd < 0:
             lambd = lambd * -1
             swap = True
         alpha = np.sqrt(omega ** 2 + lambd ** 2) - lambd
-        x = -psi(1, alpha, lambd)  # TODO CHECK
-        if (x >= 0.5) and (x <= 2.):
+        x = -psi(1, alpha, lambd)
+        if (x >= 0.5) and (x <= 2):
             t = 1
         elif x > 2:
             t = np.sqrt(2 / (alpha + lambd))
         elif x < 0.5:
             t = np.log(4 / (alpha + 2 * lambd))
 
-        x = -psi(-1, alpha, lambd)  # TODO CHECK
-        if (x >= 0.5) and (x <= 2.):
+        x = -psi(-1, alpha, lambd)
+        if (x >= 0.5) and (x <= 2):
             s = 1
         elif x > 2:
             s = np.sqrt(4 / (alpha * np.cosh(1) + lambd))
@@ -237,9 +238,9 @@ class GIGProcess(JumpLevyProcess):
         for i in range(numSamples):
             done = False
             while not done:
-                U = self.rng.uniform(low=0., high=1., size=1)
-                V = self.rng.uniform(low=0., high=1., size=1)
-                W = self.rng.uniform(low=0., high=1., size=1)
+                U = self.rng.uniform(0., 1., size=1)
+                V = self.rng.uniform(0., 1., size=1)
+                W = self.rng.uniform(0., 1., size=1)
                 if U < (q / (p + q + r)):
                     X[i] = -sd + q * V
                 elif U < ((q + r) / (p + q + r)):
@@ -353,10 +354,13 @@ class GIGProcess(JumpLevyProcess):
             # thin according to algo 4 step 4
             lambd = self.outer.lambd
             return self.H0 / (hankel_squared(np.abs(lambd), z) *
-                              (z ** (2 * np.abs(lambd))) / (self.z0 ** (2 * np.abs(lambd) - 1)))
+                              (z ** (2. * np.abs(lambd))) / (self.z0 ** (2 * np.abs(lambd) - 1)))
 
         def simulate_internal_jumps(self, rate, M, gamma_0, truncation):
             _, x = self.q1.simulate_jumps(rate, M, gamma_0, truncation)
+            _, x = self.accept_reject_simulation(x, x, thinning_func=lambda xs: (np.abs(self.outer.lambd) * incgammal(np.abs(self.outer.lambd), (self.z0 ** 2) * xs / (
+                        2. * (self.outer.delta ** 2))) / np.power(
+                    (self.z0 ** 2) * xs / (2. * self.outer.delta ** 2), np.abs(self.outer.lambd))), rate=rate)
             z = self.__generate_z(x)
             jtimes, jsizes = self.accept_reject_simulation(x, z, thinning_func=self.thinning_func, rate=rate)
             return jtimes, jsizes
@@ -366,13 +370,6 @@ class GIGProcess(JumpLevyProcess):
                 super().__init__(beta=(outer.gamma ** 2) / 2.,
                                  C=z0 / (np.pi * np.pi * H0 * np.abs(outer.lambd)))
                 self.outer = outer  # Outer is GIGProcess Object
-                self.z0 = z0
-
-            def thinning_func(self, x):
-                z0 = self.z0
-                return (np.abs(self.outer.lambd) * incgammal(np.abs(self.outer.lambd), (z0 ** 2) * x / (
-                        2. * (self.outer.delta ** 2))) / np.power(
-                    (z0 ** 2) * x / (2. * self.outer.delta ** 2), np.abs(self.outer.lambd)))
 
     class __N2(SimpleSimulator):
         def __init__(self, outer, z0, H0, rng=np.random.default_rng()):
