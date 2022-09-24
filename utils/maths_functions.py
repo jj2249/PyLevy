@@ -5,6 +5,9 @@ from scipy.special import gamma as gammafnc
 from scipy.special import hankel1, hankel2, gammainc, gammaincc
 from scipy.stats import levy_stable
 from scipy.special import gammaincinv
+from scipy.stats import kstest
+from scipy.stats import gamma as gammaDist
+from scipy.stats import norm as normDist
 
 
 def incgammau(s, x):

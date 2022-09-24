@@ -43,7 +43,7 @@ langevin2 = LangevinStateSpace(initial_state, theta, ngp, observation_matrix, tr
                                modelCase=noiseModel, rng=rng2)
 
 kv = 1e-1
-mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), transition_model=langevin2, rng=rng2, N=500)
+mpf = MarginalParticleFilter(np.zeros(2), np.eye(2), transition_model=langevin2, rng=rng2, N=50)
 means, covs = mpf.run_filter(times, observations, kv, ms=ms, Ss=Ss, progbar=True)
 
 stds = [covs[0,0], covs[1,1]]
